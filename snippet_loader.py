@@ -28,7 +28,7 @@ def plugin_loaded():
     """
     Trigger a snippet list refresh every time the plugin loads.
     """
-    refresh_snippet_cache(_snippet_list)
+    sublime.run_command('date_snippet_refresh_cache')
 
 
 def get_snippet_completion(snippet_resource, snippet_list):
@@ -104,6 +104,23 @@ def refresh_snippet_cache(snippet_list):
     resources = sublime.find_resources('*.sublime-snippet')
     for entry in resources:
         get_snippet_completion(entry, snippet_list)
+
+
+## ----------------------------------------------------------------------------
+
+
+class DateSnippetRefreshCacheCommand(sublime_plugin.ApplicationCommand):
+    """
+    When invoked, this drops the currently cached version of all snippets and
+    re-loads them.
+
+    This is implicitly triggered every time the package loads, but can also be
+    used manually as well as desired.
+    """
+    def run(self):
+        print('***REFRESHING SNIPPET CACHE***')
+        _snippet_list.clear()
+        refresh_snippet_cache(_snippet_list)
 
 
 ## ----------------------------------------------------------------------------
