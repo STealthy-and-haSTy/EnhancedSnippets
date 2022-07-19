@@ -116,6 +116,11 @@ class CustomDateSnippetAugmentedEventListener(sublime_plugin.EventListener):
     to find those which apply to the current sitaution.
     """
     def on_query_completions(self, view, prefix, locations):
+        # Respect the global setting that stops snippets from appearing in the
+        # autocompletion panel
+        if view.settings().get('auto_complete_include_snippets') == False:
+            return None
+
         completions = []
 
         # Iterate over all of the scopes for which we have loaded snippets and
