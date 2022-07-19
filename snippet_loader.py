@@ -131,6 +131,9 @@ class CustomDateSnippetAugmentedEventListener(sublime_plugin.EventListener):
     Respond to a request for completions by checking the scope of the locations
     that are provided against our list of previously loaded snippet information
     to find those which apply to the current sitaution.
+
+    We also respond to events that tell us that we should refresh the list of
+    snippets.
     """
     def on_query_completions(self, view, prefix, locations):
         # Respect the global setting that stops snippets from appearing in the
@@ -148,6 +151,10 @@ class CustomDateSnippetAugmentedEventListener(sublime_plugin.EventListener):
                 completions.extend(snippets)
 
         return completions
+
+    def on_post_save(self, view):
+        if view.file_name().endswith('.sublime-snippet'):
+            sublime.run_command('date_snippet_refresh_cache')
 
 
 ## ----------------------------------------------------------------------------
