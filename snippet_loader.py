@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ElementTree
 # Our injected completions use this kind information to mark themselves in the
 # autocomplete panel; since we're effectively going to duplicate any snippets
 # that contain dates, this will help disambiguate them for people.
-RES_KIND_DATE_SNIPPET = (sublime.KIND_ID_COLOR_BLUISH, "s", "Snippet (with date)")
+RES_KIND_ENHANCED_SNIPPET = (sublime.KIND_ID_COLOR_BLUISH, "s", "Snippet [Enhanced]")
 
 # An object that represents a list of snippets that we want to inject into the
 # autocompletion system.
@@ -28,7 +28,7 @@ def plugin_loaded():
     """
     Trigger a snippet list refresh every time the plugin loads.
     """
-    sublime.run_command('date_snippet_refresh_cache')
+    sublime.run_command('enhanced_snippet_refresh_cache')
 
 
 def get_snippet_completion(snippet_resource, snippet_list):
@@ -81,9 +81,9 @@ def get_snippet_completion(snippet_resource, snippet_list):
                 'contents': content.lstrip(),
                 'DATE': datetime.today().strftime('%x')
             },
-            annotation=f"{description} [w/date]",
-            kind=RES_KIND_DATE_SNIPPET,
-            details='Augmented snippet (includes current date)'))
+            annotation=f"{description} [Enhanced]",
+            kind=RES_KIND_ENHANCED_SNIPPET,
+            details='Enhanced snippet'))
 
     except Exception as err:
         print(f"Error loading snippet: {err}")
@@ -109,7 +109,7 @@ def refresh_snippet_cache(snippet_list):
 ## ----------------------------------------------------------------------------
 
 
-class DateSnippetRefreshCacheCommand(sublime_plugin.ApplicationCommand):
+class EnhancedSnippetRefreshCacheCommand(sublime_plugin.ApplicationCommand):
     """
     When invoked, this drops the currently cached version of all snippets and
     re-loads them.
@@ -126,7 +126,7 @@ class DateSnippetRefreshCacheCommand(sublime_plugin.ApplicationCommand):
 ## ----------------------------------------------------------------------------
 
 
-class CustomDateSnippetAugmentedEventListener(sublime_plugin.EventListener):
+class AugmentedSnippetEventListener(sublime_plugin.EventListener):
     """
     Respond to a request for completions by checking the scope of the locations
     that are provided against our list of previously loaded snippet information
@@ -154,7 +154,7 @@ class CustomDateSnippetAugmentedEventListener(sublime_plugin.EventListener):
 
     def on_post_save(self, view):
         if view.file_name().endswith('.sublime-snippet'):
-            sublime.run_command('date_snippet_refresh_cache')
+            sublime.run_command('enhanced_snippet_refresh_cache')
 
 
 ## ----------------------------------------------------------------------------

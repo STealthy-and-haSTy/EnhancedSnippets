@@ -1,0 +1,26 @@
+[
+  { "caption": "Preferences: EnhancedSnippets",
+    "command": "edit_settings",
+    "args": {
+      "base_file": "${packages}/EnhancedSnippets/resources/EnhancedSnippets.sublime-settings",
+      "default": "{\n\t$0\n}\n"
+    }
+  },
+  { "caption": "Preferences: EnhancedSnippets Key Bindings",
+    "command": "edit_settings",
+    "args": {
+      "base_file": "${packages}/EnhancedSnippets/resources/Default (${platform}).sublime-keymap",
+      "default": "[\n\t$0\n]\n"
+    }
+  },
+  { "caption": "EnhancedSnippets: Open Readme",
+    "command": "open_file",
+    "args": {
+      "file": "${packages}/EnhancedSnippets/README.md"
+    }
+  },
+
+  { "caption": "EnhancedSnippets: Refresh Snippet Cache",
+    "command": "enhanced_snippet_refresh_cache"
+  },
+]

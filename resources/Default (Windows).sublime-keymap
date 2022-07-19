@@ -1,0 +1,8 @@
+[
+    // Use the below key binding as a template if you would like to bind a key
+    // to cause the list of loaded snippets to be manually refreshed; you can
+    // also carry out this action without a key binding using the command
+    // palette.
+
+    // { "keys": ["ctrl+alt+shift+r"], "command": "enhanced_snippet_refresh_cache" },
+]
