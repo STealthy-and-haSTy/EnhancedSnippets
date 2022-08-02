@@ -15,10 +15,18 @@ RES_KIND_ENHANCED_SNIPPET = (sublime.KIND_ID_COLOR_BLUISH, "s", "Snippet [Enhanc
 
 # An object that represents a list of snippets that we want to inject into the
 # autocompletion system.
-#
+
 # In this dictionary the keys are scopes and the values of those keys are
-# arrays of completion items that apply in those scopes.
+# arrays of dicts that have the keys ('trigger', 'description', 'content',
+# 'enhancers') to represent the snippet content to be inserted.
+#
+# These will dynamically get converted into completion items when they are
+# offered in the AC panel.
 _snippet_list = {}
+
+# A list of all of the known classes that can potentially offer enhanced
+# snippet expansion variables.
+_snippet_extensions = []
 
 
 ## ----------------------------------------------------------------------------
@@ -29,6 +37,26 @@ def plugin_loaded():
     Trigger a snippet list refresh every time the plugin loads.
     """
     sublime.run_command('enhanced_snippet_refresh_cache')
+
+
+def get_completion_classes(trigger, content):
+    """
+    Given the tab trigger for a snippet and its contents, return back a list of
+    all of the known enhancement classes that apply to this particular snippet.
+
+    This can be an empty list if none apply.
+    """
+    classes = []
+
+    # We can only work with snippets that have a tab trigger since we only
+    # support AC type snippets, and there's no need to waste time checking if
+    # there's no body of the snippet to enhance.
+    if '' not in (trigger, content):
+        for enhancer in _snippet_extensions:
+            if enhancer.is_applicable(content):
+                classes.append(enhancer)
+
+    return classes
 
 
 def get_snippet_completion(snippet_resource, snippet_list):
@@ -59,9 +87,11 @@ def get_snippet_completion(snippet_resource, snippet_list):
         content = '' if content is None else content.text
         scope = '' if scope is None else scope.text
 
-        # If there is no tab trigger, or the content doesn't include the
-        # special date trigger, we don't care about this snippet.
-        if '' in (trigger, content) or content.find('${DATE}') == -1:
+        # Get the list of potential enhancements that we can make to this
+        # snippet, which is based on the snippet content itself. If there are
+        # not any, then we can just leave.
+        enhancers = get_completion_classes(trigger, content)
+        if not enhancers:
             return
 
         # Get the array into which we're going to insert our completion handler;
@@ -71,22 +101,53 @@ def get_snippet_completion(snippet_resource, snippet_list):
             items = []
             snippet_list[scope] = items
 
-        # Return the scope to which this snippet applies (which can be the
-        # empty string to imply everywhere) and a completion item that will
-        # insert the snippet, expanding out the date.
-        items.append(sublime.CompletionItem.command_completion(
+        # Insert a dictionary that tells us how to create the appropriate
+        # completion item when the completion fires.
+        items.append({
+            'trigger': trigger,
+            'description': description,
+            'content': content.lstrip(),
+            'enhancers': enhancers
+        })
+
+    except Exception as err:
+        print(f"Error loading snippet: {err}")
+
+
+def create_completions(input_list):
+    """
+    Given a list of objects that represent possible completions, expand them
+    out into full blown completion items and return back a new list that
+    contains them.
+    """
+    completions = []
+
+    # for each of the items in the input list, create a new completion item
+    # and insert it into the completions array.
+    for options in input_list:
+        trigger = options["trigger"]
+        description = options["description"]
+        content = options["content"]
+        enhancers = options["enhancers"]
+
+
+        # Construct the arguments that are going to be passed to the snippet
+        # command when the completion invokes.
+        snippet_args = { 'contents': content.lstrip() }
+        for enhancement in enhancers:
+            snippet_args.update(enhancement.variables(content))
+
+        # print(snippet_args)
+
+        completions.append(sublime.CompletionItem.command_completion(
             trigger=trigger,
             command='insert_snippet',
-            args={
-                'contents': content.lstrip(),
-                'DATE': datetime.today().strftime('%x')
-            },
+            args=snippet_args,
             annotation=f"{description} [Enhanced]",
             kind=RES_KIND_ENHANCED_SNIPPET,
             details='Enhanced snippet'))
 
-    except Exception as err:
-        print(f"Error loading snippet: {err}")
+    return completions
 
 
 def refresh_snippet_cache(snippet_list):
@@ -118,7 +179,6 @@ class EnhancedSnippetRefreshCacheCommand(sublime_plugin.ApplicationCommand):
     used manually as well as desired.
     """
     def run(self):
-        print('***REFRESHING SNIPPET CACHE***')
         _snippet_list.clear()
         refresh_snippet_cache(_snippet_list)
 
@@ -148,13 +208,106 @@ class AugmentedSnippetEventListener(sublime_plugin.EventListener):
         # locations list for this view in order to be injected.
         for scope,snippets in _snippet_list.items():
             if all([view.match_selector(pt, scope) for pt in locations]):
-                completions.extend(snippets)
+                completions.extend(create_completions(snippets))
 
         return completions
 
     def on_post_save(self, view):
+        # TODO: THis should be rooted in the packages folder
         if view.file_name().endswith('.sublime-snippet'):
             sublime.run_command('enhanced_snippet_refresh_cache')
+
+
+## ----------------------------------------------------------------------------
+
+
+class EnhancedSnippetBase():
+    """
+    This is the base class for creating a new enhanced snippet expansion. As
+    snippets are loaded (or reloaded), subclasses of this class are used to
+    see if the content of a snippet needs any extra expansions, and if so,
+    what they are.
+    """
+    @classmethod
+    def is_applicable(cls, content):
+        """
+        Given the parsed content of a snippet, return a boolean indication of
+        wether or not there is a variable that needs to be expanded out by this
+        class or not.
+
+        The base class implementation assumes no variables are needed.
+        """
+        return False
+
+    @classmethod
+    def variables(cls, content):
+        """
+        Given a parsed snippet body, return back a dictionary where the keys
+        are the variables that need to be expanded, and the values are the
+        text that will be inserted when that snippet expands.
+
+        This will only get invoked if is_applicable() says that this class
+        is supposed to contribute snippet variables.
+        """
+        return dict()
+
+
+## ----------------------------------------------------------------------------
+
+
+class InsertDateSnippet(EnhancedSnippetBase):
+    """
+    This snippet enhancement class provides the ability to expand out variables
+    into the current date and time.
+    """
+    @classmethod
+    def is_applicable(cls, content):
+        """
+        In order for us to contribute a variable, the snippet body needs to
+        want to inject a date into the snippet.
+        """
+        return content.find('${DATE}') != -1
+
+    @classmethod
+    def variables(cls, content):
+        """
+        The only variable that we support is a DATE, which inserts the current
+        date into the snippet.
+        """
+        return {
+            'DATE': datetime.today().strftime('%x')
+        }
+
+_snippet_extensions.append(InsertDateSnippet)
+
+
+## ----------------------------------------------------------------------------
+
+
+class InsertClipboardSnippet(EnhancedSnippetBase):
+    """
+    This snippet enhancement class provides the ability to expand out variables
+    that contain the current clipboard text.
+    """
+    @classmethod
+    def is_applicable(cls, content):
+        """
+        In order for us to contribute a variable, the snippet body needs to
+        want to inject the clipboard into the snippet.
+        """
+        return content.find('${CLIPBOARD}') != -1
+
+    @classmethod
+    def variables(cls, content):
+        """
+        The only variable that we support is a CLIPBOARD, which inserts the
+        current clipboard contents into the snippet.
+        """
+        return {
+            'CLIPBOARD': sublime.get_clipboard()
+        }
+
+_snippet_extensions.append(InsertClipboardSnippet)
 
 
 ## ----------------------------------------------------------------------------
