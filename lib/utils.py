@@ -2,6 +2,8 @@ import sublime
 
 import xml.etree.ElementTree as ElementTree
 
+from ..src.core import log
+
 
 ## ----------------------------------------------------------------------------
 
@@ -137,7 +139,7 @@ def get_snippet_completion(snippet_resource, snippet_list):
         })
 
     except Exception as err:
-        print(f"Error loading snippet: {err}")
+        log(f"Error loading snippet: {err}")
 
 
 def create_completions(input_list):
