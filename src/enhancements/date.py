@@ -1,4 +1,3 @@
-import re
 from datetime import datetime
 
 from .base import EnhancedSnippetBase
@@ -8,27 +7,23 @@ from .base import EnhancedSnippetBase
 
 
 class InsertDateSnippet(EnhancedSnippetBase):
-    # Look for full form date variables wherein the optional default value can
-    # be a stftime format string for how to present the current date.
-    _regex = re.compile(r"\${DATE(:[^}]*)?}")
-
     """
     This snippet enhancement class provides the ability to expand out variables
-    into the current date and time.
+    into the current date and time. If a default value is provided for this
+    variable, it is interpreted as a date format string.
     """
-    @classmethod
-    def is_applicable(cls, content):
-        """
-        In order for us to contribute a variable, the snippet body needs to
-        want to inject a date into the snippet.
-        """
-        return cls._regex.search(content) is not None
+    def variable_name(self):
+        return 'DATE'
 
-    @classmethod
-    def variables(cls, content):
+
+    def variables(self, content):
         """
         The only variable that we support is a DATE, which inserts the current
         date into the snippet.
+
+        This will potentially rewrite the content of the snippet and export
+        many variables, one for each of the distinct date formats that were
+        provided.
         """
         today = datetime.today()
         variables = {
@@ -47,7 +42,7 @@ class InsertDateSnippet(EnhancedSnippetBase):
 
             return f'${{{var}}}'
 
-        content = cls._regex.sub(add_variable, content)
+        content = self.regex.sub(add_variable, content)
         return variables, content
 
 

@@ -11,8 +11,8 @@ import xml.etree.ElementTree as ElementTree
 # that contain dates, this will help disambiguate them for people.
 RES_KIND_ENHANCED_SNIPPET = (sublime.KIND_ID_COLOR_BLUISH, "s", "Snippet [Enhanced]")
 
-# A list of all of the known classes that can potentially offer enhanced
-# snippet expansion variables.
+# A list of instances of all of the known classes that can potentially offer
+# enhanced snippet expansion variables.
 _snippet_extensions = []
 
 # An object that represents a list of snippets that we want to inject into the
@@ -43,14 +43,15 @@ def log(message, *args, status=False, dialog=False):
         sublime.message_dialog(message)
 
 
-def add_snippet_extension(classObj):
+def add_snippet_extension(extensionClass):
     """
-    Add the given class (which should be a subclass of the EnhancedSnippetBase
-    parent class) to the list snippet variable extension classes.
+    Add an instance of the given class (which should be a subclass of the
+    EnhancedSnippetBase parent class) to the list snippet variable extension
+    objects that are used to expand out our variables.
     """
     # TODO: This should notice if this class is in the list (by name) and
     # replace the old one with this new one
-    _snippet_extensions.append(classObj)
+    _snippet_extensions.append(extensionClass())
 
 
 def get_snippet_extensions():
