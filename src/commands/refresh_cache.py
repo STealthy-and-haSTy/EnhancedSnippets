@@ -1,8 +1,7 @@
 import sublime
 import sublime_plugin
 
-from ...lib.utils import clear_snippet_list, refresh_snippet_cache
-from ...lib.utils import get_snippet_list
+from ...lib import manager
 
 
 ## ----------------------------------------------------------------------------
@@ -17,8 +16,7 @@ class EnhancedSnippetRefreshCacheCommand(sublime_plugin.ApplicationCommand):
     used manually as well as desired.
     """
     def run(self):
-        clear_snippet_list()
-        refresh_snippet_cache(get_snippet_list())
+        manager.scan()
 
 
 ## ----------------------------------------------------------------------------

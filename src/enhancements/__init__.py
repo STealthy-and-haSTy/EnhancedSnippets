@@ -2,7 +2,7 @@ from ...enhanced_snippets import reload
 
 reload("src.enhancements", ["base", "date", "clipboard"])
 
-from ...lib.utils import add_snippet_extension
+from ...lib.utils import add_snippet_extension, get_snippet_extensions
 
 from .base import EnhancedSnippetBase
 from .date import InsertDateSnippet
@@ -13,6 +13,7 @@ from .clipboard import InsertClipboardSnippet
 add_snippet_extension(InsertDateSnippet)
 add_snippet_extension(InsertClipboardSnippet)
 
+
 __all__ = [
     # The base enhancement class from which others derive
     "EnhancedSnippetBase",
@@ -21,5 +22,6 @@ __all__ = [
     "InsertDateSnippet",
     "InsertClipboardSnippet",
 ]
+
 
 ## ----------------------------------------------------------------------------
