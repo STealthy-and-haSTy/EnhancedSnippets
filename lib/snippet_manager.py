@@ -83,7 +83,7 @@ class SnippetManager():
         passed in list from all of our internal lists.
         """
         for snippet in [s for s in items if s.resource in self._res_list]:
-            log(f'discarding snippet from {snippet.resource}')
+            log(f'discarding: {snippet.resource}')
 
             res = snippet.resource
             pkg = snippet.package
@@ -139,16 +139,17 @@ class SnippetManager():
         self._discard_snippet_list(self._pkg_list.get(pkg_name, []))
 
 
-    def _add_snippet(self, snippet):
+    def reload_snippet(self, res_name):
         """
-        Given a snippet object, add it to the appropriate internal tables,
-        replacing any existing item that might already exist with the same
-        resource name.
+        Given a snippet resource file, drop any version of that snippet that
+        we might have, then check to see if that is an enhanced snippet and
+        if so update the lists.
+
+        This can be used to both add a brand new snippet as well as to update
+        an existing one.
         """
-        log(f'adding snippet from {snippet.resource}')
-        self._res_list[snippet.resource] = snippet
-        _get_list(self._scope_list, snippet.scope).append(snippet)
-        _get_list(self._pkg_list, snippet.package).append(snippet)
+        self.discard_snippet(res_name)
+        self._load_snippet(res_name)
 
 
     def __scan_snippets(self, prefix=''):
@@ -162,9 +163,7 @@ class SnippetManager():
         # instance, add them to the appropriate lists.
         res = sublime.find_resources('*.sublime-snippet')
         for entry in [r for r in res if r.startswith(prefix)]:
-            snippet = self._load_snippet(entry)
-            if snippet:
-                self._add_snippet(snippet)
+            self._load_snippet(entry)
 
 
     def scan(self):
@@ -269,11 +268,19 @@ class SnippetManager():
             if not enhancers:
                 return None
 
-            # Get the package name that this resource is in, and then return
-            # back an appropriate instance.
+            # Get the package name that this resource is in and create a new
+            # instance.
             pkg_name = res_name.split('/')[1]
-            return Snippet(trigger, description, content.lstrip(), enhancers,
+            snippet = Snippet(trigger, description, content.lstrip(), enhancers,
                 scope, res_name, pkg_name)
+
+            # Link the snippet into our tables, then return
+            log(f'adding: {snippet.resource}')
+            self._res_list[snippet.resource] = snippet
+            _get_list(self._scope_list, snippet.scope).append(snippet)
+            _get_list(self._pkg_list, snippet.package).append(snippet)
+
+            return snippet
 
         except Exception as err:
             log(f"Error loading snippet: {err}")
