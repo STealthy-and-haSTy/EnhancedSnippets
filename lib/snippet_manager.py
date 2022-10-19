@@ -3,7 +3,8 @@ import sublime
 from collections import namedtuple
 import xml.etree.ElementTree as ElementTree
 
-from .utils import log, get_completion_classes
+from .utils import log
+from .enhancement_manager import enhancements
 
 
 ## ----------------------------------------------------------------------------
@@ -264,7 +265,7 @@ class SnippetManager():
             # Get the list of potential enhancements that we can make to this
             # snippet, which is based on the snippet content itself. If there
             # are not any, then we can just leave.
-            enhancers = get_completion_classes(trigger, content)
+            enhancers = enhancements.get_snippet_enhancements(trigger, content)
             if not enhancers:
                 return None
 
