@@ -1,7 +1,7 @@
 import sublime
 import sublime_plugin
 
-from ...lib import manager
+from ...lib import SnippetManager
 
 
 ## ----------------------------------------------------------------------------
@@ -16,7 +16,7 @@ class EnhancedSnippetRefreshCacheCommand(sublime_plugin.ApplicationCommand):
     used manually as well as desired.
     """
     def run(self):
-        manager.scan()
+        SnippetManager.instance.scan()
 
 
 ## ----------------------------------------------------------------------------

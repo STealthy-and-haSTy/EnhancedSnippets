@@ -2,7 +2,7 @@ import sublime
 import sublime_plugin
 
 
-from ..lib import manager
+from ..lib import SnippetManager
 
 
 ## ----------------------------------------------------------------------------
@@ -92,7 +92,7 @@ class AugmentedSnippetEventListener(sublime_plugin.EventListener):
         if view.settings().get('auto_complete_include_snippets') == False:
             return None
 
-        snippets = manager.match_view(view, locations)
+        snippets = SnippetManager.instance.match_view(view, locations)
         return _create_completions(snippets)
 
 
@@ -101,7 +101,7 @@ class AugmentedSnippetEventListener(sublime_plugin.EventListener):
         # snippet.
         res_name = is_snippet(view.file_name())
         if res_name:
-            manager.reload_snippet(res_name)
+            SnippetManager.instance.reload_snippet(res_name)
 
 
 ## ----------------------------------------------------------------------------

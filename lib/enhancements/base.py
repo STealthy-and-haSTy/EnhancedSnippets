@@ -24,7 +24,8 @@ class EnhancedSnippetBase():
         enhancement in any way it sees fit.
         """
         self.regex = re.compile(rf"\${{{self.variable_name()}(:[^}}]*)?}}")
-        log(f"{self.__class__.__qualname__} => {self.regex.pattern}")
+        name = self.__class__.__qualname__
+        log(f"adding enhancement: {name} => {self.regex.pattern}")
 
 
     def variable_name(self):

@@ -4,7 +4,6 @@ from collections import namedtuple
 import xml.etree.ElementTree as ElementTree
 
 from .utils import log
-from .enhancement_manager import enhancements
 
 
 ## ----------------------------------------------------------------------------
@@ -51,18 +50,54 @@ class SnippetManager():
     Instances of this class are responsible for holding onto the list of all of
     the known snippets that we're extending, and includes API methods that
     allow for querying and updating the list.
+
+    This class is treated as a singleton; all of the useful methods are class
+    methods that track the internal instance so you don't have to.
     """
-    def __init__(self):
+    instance = None
+
+    def __init__(self, listener, enhancements):
+        if SnippetManager.instance is not None:
+            return
+
+        SnippetManager.instance = self
+        self.enhancements = enhancements
+
         # Start with our data structures empty.
-        self.discard_all()
+        self.discard_all(quiet=True)
+
+        # Listen for settings changing, so we know when we need to drop or scan
+        # for snippets.
+        listener.add_listener(lambda a,r: self._settings_change(a, r))
+
+        # Now that setup is complete, scan for all enhanched snippets across
+        # all packages.
+        self.scan()
 
 
-    def discard_all(self):
+    def _settings_change(self, added, removed):
+        """
+        This gets invoked whenever the list of ignored packages changes, to
+        tell us which packages were added to the setting and which were removed
+        from it.
+        """
+        print("added:", added, "removed:", removed)
+
+        for pkg in added:
+            self.discard_pkg(pkg)
+
+        for pkg in removed:
+            self.scan_pkg(pkg)
+
+
+
+    def discard_all(self, quiet=False):
         """
         Completely discard all known snippets from all of the internal lists;
         this puts everything into a completely clean state.
         """
-        log(f'discarding all snippets')
+        if not quiet:
+            log(f'discarding all snippets')
 
         # These lists are all dictionaries wherein the key is the important bit
         # of distinction (scope selector, package name or full resource path)
@@ -129,12 +164,13 @@ class SnippetManager():
         self._discard_snippet_list(result)
 
 
-    def discard_pkg(self, pkg_name):
+    def discard_pkg(self, pkg_name, quiet=False):
         """
         Given a package name, remove from all of our internal lists all
         snippets contributed by that package.
         """
-        log(f'discarding all snippets in package {pkg_name}')
+        if not quiet:
+            log(f'discarding all snippets in package {pkg_name}')
 
         self._discard_snippet_list(self._pkg_list.get(pkg_name, []))
 
@@ -171,7 +207,8 @@ class SnippetManager():
         Discard all of our lists of snippets and do a complete and total rescan
         of the entire package ecosytem.
         """
-        self.discard_all()
+        log('scanning for enhanced snippets across all packages')
+        self.discard_all(quiet=True)
         self.__scan_snippets()
 
 
@@ -181,7 +218,8 @@ class SnippetManager():
         to be in that package (from all of the internal lists), and then do a
         fresh scan of snippets that exist in that path and re-add them.
         """
-        self.discard_pkg(pkg_name)
+        log(f"scanning for enhanced snippets in package '{pkg_name}'")
+        self.discard_pkg(pkg_name, quiet=True)
         self.__scan_snippets(f"Packages/{pkg_name}/")
 
 
@@ -264,7 +302,7 @@ class SnippetManager():
             # Get the list of potential enhancements that we can make to this
             # snippet, which is based on the snippet content itself. If there
             # are not any, then we can just leave.
-            enhancers = enhancements.get_snippet_enhancements(trigger, content)
+            enhancers = self.enhancements.get_snippet_enhancements(trigger, content)
             if not enhancers:
                 return None
 
@@ -275,7 +313,7 @@ class SnippetManager():
                 scope, res_name, pkg_name)
 
             # Link the snippet into our tables, then return
-            log(f'adding: {snippet.resource}')
+            log(f'adding snippet: {snippet.resource}')
             self._res_list[snippet.resource] = snippet
             _get_list(self._scope_list, snippet.scope).append(snippet)
             _get_list(self._pkg_list, snippet.package).append(snippet)
@@ -287,7 +325,3 @@ class SnippetManager():
 
 
 ## ----------------------------------------------------------------------------
-
-
-# Instantiate our single instance
-manager = SnippetManager()

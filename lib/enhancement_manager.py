@@ -1,5 +1,8 @@
 import sublime
 
+from .enhancements import install_enhancements
+
+
 
 ## ----------------------------------------------------------------------------
 
@@ -11,6 +14,9 @@ class EnhancementManager():
     """
     _extensions = {}
 
+    def __init__(self):
+        install_enhancements(self)
+
 
     def add(self, extensionClass):
         """
@@ -21,7 +27,7 @@ class EnhancementManager():
         self._extensions[extensionClass.__name__] = extensionClass()
 
 
-    def get(self, ):
+    def get(self):
         """
         Get the list of currently known snippet variable extension classes.
         """
@@ -49,7 +55,3 @@ class EnhancementManager():
 
 
 ## ----------------------------------------------------------------------------
-
-
-# Instantiate our single instance
-enhancements = EnhancementManager()
