@@ -2,14 +2,14 @@
   { "caption": "Preferences: EnhancedSnippets",
     "command": "edit_settings",
     "args": {
-      "base_file": "${packages}/EnhancedSnippets/resources/EnhancedSnippets.sublime-settings",
+      "base_file": "${packages}/EnhancedSnippets/resources/settings/EnhancedSnippets.sublime-settings",
       "default": "{\n\t$0\n}\n"
     }
   },
   { "caption": "Preferences: EnhancedSnippets Key Bindings",
     "command": "edit_settings",
     "args": {
-      "base_file": "${packages}/EnhancedSnippets/resources/Default (${platform}).sublime-keymap",
+      "base_file": "${packages}/EnhancedSnippets/resources/keymap/Default (${platform}).sublime-keymap",
       "default": "[\n\t$0\n]\n"
     }
   },
