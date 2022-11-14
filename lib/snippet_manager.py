@@ -197,7 +197,7 @@ class SnippetManager():
         """
         # Scan over all snippets, load them, and for any that return a Snippet
         # instance, add them to the appropriate lists.
-        res = sublime.find_resources('*.sublime-snippet')
+        res = sublime.find_resources('*.enhanced-sublime-snippet')
         for entry in [r for r in res if r.startswith(prefix)]:
             self._load_snippet(entry)
 
@@ -300,11 +300,8 @@ class SnippetManager():
             scope = '' if scope is None else scope.text
 
             # Get the list of potential enhancements that we can make to this
-            # snippet, which is based on the snippet content itself. If there
-            # are not any, then we can just leave.
+            # snippet, which is based on the snippet content itself.
             enhancers = self.enhancements.get_snippet_enhancements(trigger, content)
-            if not enhancers:
-                return None
 
             # Get the package name that this resource is in and create a new
             # instance.

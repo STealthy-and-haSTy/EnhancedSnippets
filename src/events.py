@@ -60,7 +60,7 @@ def _create_completions(snippet_list):
     return completions
 
 
-def is_snippet(name):
+def is_enhanced_snippet(name):
     """
     Checks to see if a filename looks like a snippet, which means that it has
     a filename that matches and that it's rooted in the packages folder.
@@ -69,7 +69,7 @@ def is_snippet(name):
     is returned; otherwise none is returned.
     """
     spp = sublime.packages_path()
-    if name.startswith(spp) and name.endswith('.sublime-snippet'):
+    if name.startswith(spp) and name.endswith('.enhanced-sublime-snippet'):
         return f'Packages/{name[len(spp)+1:]}'
 
     return None
@@ -99,7 +99,7 @@ class AugmentedSnippetEventListener(sublime_plugin.EventListener):
     def on_post_save(self, view):
         # Any time a saved file represents a snippet resource, reload that
         # snippet.
-        res_name = is_snippet(view.file_name())
+        res_name = is_enhanced_snippet(view.file_name())
         if res_name:
             SnippetManager.instance.reload_snippet(res_name)
 
