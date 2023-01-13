@@ -1,6 +1,8 @@
 import sublime
 
 from collections import namedtuple
+from fnmatch import fnmatch
+
 import xml.etree.ElementTree as ElementTree
 
 from .utils import log
@@ -15,7 +17,7 @@ from .utils import log
 # list of the enhancement classes that contribute to its expansion.
 Snippet = namedtuple('Snippet', [
     'trigger', 'description', 'content', 'enhancers',
-    'scope', 'resource', 'package'
+    'scope', 'glob', 'resource', 'package'
 ])
 
 
@@ -259,6 +261,38 @@ class SnippetManager():
         return result;
 
 
+    def glob_match(self, view, snippet):
+        """
+        Given a view and a snippet, return True or False to indicate whether
+        the name of this file matches the snippet glob.
+
+        Snippet with no glob always match; if there is a glob, then the file
+        must match, which means that views with no filename can't possibly be
+        a match.
+        """
+        if snippet.glob == '':
+            return True
+
+        if view.file_name() is None:
+            return False
+
+        return fnmatch(view.file_name(), snippet.glob)
+
+
+    def scope_match(self, view, locations, snippet):
+        """
+        Given a view, locations in the view, and a snippet, return True or
+        False to indicate whether this snippet applies to this scope.
+
+        Snippets with no scope always match; if there is a scope then it must
+        match every location in the view in order for this to be a match.
+        """
+        if snippet.scope == '':
+            return True
+
+        return all([view.match_selector(pt, snippet.scope) for pt in locations])
+
+
     def match_view(self, view, locations):
         """
         Given a view and a list of locations, return back all snippets that
@@ -270,9 +304,14 @@ class SnippetManager():
         """
         result = []
 
-        for scope, snippets in self._scope_list.items():
-            if all([view.match_selector(pt, scope) for pt in locations]):
-                result.extend(snippets)
+        # Grab the filename for this view (if any) and then iterate over all
+        # snippets to find the ones that match in the current situation, whicn
+        # is a combination of glob and scope.
+        filename = view.file_name() or ''
+        for snippet in self._res_list.values():
+            if (self.glob_match(view, snippet) and
+                self.scope_match(view, locations, snippet)):
+                result.append(snippet)
 
         return result
 
@@ -314,6 +353,7 @@ class SnippetManager():
             description = root.find('description')
             content = root.find('content')
             scope = root.find('scope')
+            glob = root.find('glob')
 
             # Get the string content of each of the snippet parts, backfilling
             # with empty strings for any missing nodes.
@@ -321,6 +361,7 @@ class SnippetManager():
             description = '' if description is None else description.text
             content = '' if content is None else content.text
             scope = '' if scope is None else scope.text
+            glob = '' if glob is None else glob.text
 
             # Get the list of potential enhancements that we can make to this
             # snippet, which is based on the snippet content itself.
@@ -330,7 +371,7 @@ class SnippetManager():
             # instance.
             pkg_name = res_name.split('/')[1]
             snippet = Snippet(trigger, description, content.lstrip(), enhancers,
-                scope, res_name, pkg_name)
+                scope, glob, res_name, pkg_name)
 
             # Link the snippet into our tables, then return
             log(f'adding snippet: {snippet.resource}')
