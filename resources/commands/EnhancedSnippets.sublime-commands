@@ -23,4 +23,8 @@
   { "caption": "EnhancedSnippets: Refresh Snippet Cache",
     "command": "enhanced_snippet_refresh_cache"
   },
+
+  { "caption": "EnhancedSnippets: Refresh Enhancements Cache",
+    "command": "enhanced_snippet_refresh_enhancements"
+  },
 ]

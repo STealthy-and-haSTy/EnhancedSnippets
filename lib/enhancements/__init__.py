@@ -9,7 +9,7 @@ from .clipboard import InsertClipboardSnippet
 from ..utils import log
 
 
-def install_enhancements(enhancements):
+def install_builtin_enhancements(enhancements):
     """
     This will register all of the shipped snippet enhancements with the
     enhancement manager instance provided.
@@ -28,7 +28,7 @@ __all__ = [
     "InsertClipboardSnippet",
 
     # The function that initalizes enhancements for us.
-    "install_enhancements",
+    "install_builtin_enhancements",
 ]
 
 

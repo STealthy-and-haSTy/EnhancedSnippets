@@ -83,11 +83,20 @@ class SnippetManager():
         """
         print("added:", added, "removed:", removed)
 
+        # TODO: This should first cause a rescan of any enhancement classes,
+        #       since they may have changed as a result of this. Most likely
+        #       we want the enhancement loader to be augmented to store the
+        #       package that the classes came from so that it can be smart
+        #       about this (we could tell it what packages to reload).
+        #
+        #       It should also use a debounce timer, if this call is not already
+        #       using one.
         for pkg in added:
             self.discard_pkg(pkg)
 
         for pkg in removed:
             self.scan_pkg(pkg)
+
 
 
 
@@ -201,6 +210,20 @@ class SnippetManager():
         for entry in [r for r in res if r.startswith(prefix)]:
             self._load_snippet(entry)
 
+
+    def reload_enhancements(self):
+        """
+        Ask the snippet enhancements module to force scan and reload all of
+        the modules that provide enhancements.
+        """
+        self.enhancements.scan_for_enhancements()
+
+        # TODO: If this causes new enhancements to be found or enhancements to
+        #       go away, then we should rescan all snippets that we know about
+        #       because they may refer to enhancements that no longer exist.
+        #
+        #       In fact we should maybe do that anyway just because if an
+        #       enhancement changes, our internal list might stay out?
 
     def scan(self):
         """
