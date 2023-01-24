@@ -31,8 +31,11 @@ def _create_completions(snippet_list):
         trigger = snippet.trigger
         description = snippet.description
         content = snippet.content
-        enhancers = snippet.enhancers
+        fields = snippet.fields
 
+        # Get the list of classes that are used to expand out the custom
+        # variables in this snippet.
+        enhancers = SnippetManager.instance.get_variable_classes(fields)
 
         # Construct the arguments that are going to be passed to the snippet
         # command when the completion invokes.

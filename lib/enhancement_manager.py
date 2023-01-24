@@ -3,10 +3,24 @@ import sublime
 import sys
 import importlib
 
+from collections import namedtuple
+from traceback import print_tb
+
 from .enhancements import install_builtin_enhancements, EnhancedSnippetBase
 from .utils import log
 
 from importlib import import_module
+
+
+## ----------------------------------------------------------------------------
+
+
+# This named tuple reprents the information for a snippet enhancement variable
+# and tracks the name of the variable, the name of the module that it's defined
+# in, and the instance of the class to be used during expansions.
+SnippetVariable = namedtuple('SnippetVariable', [
+    'name', 'module', 'instance'
+])
 
 
 ## ----------------------------------------------------------------------------
@@ -32,12 +46,52 @@ _ENHANCEMENT_MODULE = 'snippet_enhancers'
 ## ----------------------------------------------------------------------------
 
 
+# Theory:
+#   - If we store enhancements with a key that includes their module and their
+#     package, there is no chance of collision except when a person does
+#     something dumb, and we already assume that we need to silently replace
+#     due to reloading.
+#
+#   - If we store enhancements with a key that includes the package, we can
+#     easily look them up to discard the if needed.
+#
+# TODO:
+#   - [x] store enhancement classes as "PKG.MODULE.CLASS" instead of "CLASS"
+#      - Allow clobbers silently because it must means a reload
+#
+#   - [ ] Store a list of variables and point it at the class that represents
+#         it. If a new class uses the same variable, then display a warning and
+#         clobber over. In this case
+#
+#   - [ ] Provide the ability to remove all enhancements based on the class.
+#         It has to keep all storage up to date, including the list of variables
+#         since some of the are going away.
+#
+#   - [ ] Tie the removal code to the setings listener, so that when a pacakge
+#         goes away we can drop its stuff.
+#
+#  REMEMBER: Except at startup, any change to the list of extensions requires
+#            that all snippets be rescanned. This probably means that for
+#            ultimate coolness we need to store for each snippet the variables
+#            that it requires so that we know which snippets to tweak when
+#            things change.
+#
+
 class EnhancementManager():
     """
     Instances of this class are responsible for keeping track of the classes
-    that give us our enhanced snippet variables.
+    that give us our enhanced snippet variables. The keys are the name of the
+    enhancement class as a string and the value is an instance of the class
+    for use at runtime.
     """
-    _extensions = {}
+    # In this object, the key is the name of a snippet field and the value is
+    # a SnippetVariable that gives the details about that particular field.
+    _fields = {}
+
+    # In this object, the key is the fully qualified module name of the class
+    # that represents a snippet variable and the value is a SnippetVariable
+    # that provides details about that particular field.
+    _modules = {}
 
     def __init__(self):
         self.scan_for_enhancements()
@@ -49,44 +103,77 @@ class EnhancementManager():
         EnhancedSnippetBase parent class) to the list snippet variable extension
         objects that are used to expand out our variables.
         """
-        self._extensions[extensionClass.__name__] = extensionClass()
+        module = f'{extensionClass.__module__}.{extensionClass.__name__}'
+        try:
+            instance = extensionClass()
+            entry = SnippetVariable(instance.variable_name(), module, instance)
+
+            # Check to see if this field exists in the list or not; if it does
+            # it must come from the same module as this one, or we need to
+            # get rid of it.
+            existing = self._fields.get(entry.name)
+            if existing and existing.module != entry.module:
+                log(f'found reimplementation of enhancement {entry.name}')
+                del self._fields[entry.name]
+                del self._modules[entry.module]
+
+            # Store the entry cross referenced by field name and by module
+            # name.
+            self._fields[entry.name] = entry
+            self._modules[entry.module] = entry
+
+        except Exception as error:
+            log(f'Unable to load enhancements from {module}: {str(error)}')
+            print_tb(error.__traceback__)
 
 
-    def get(self):
+    def get_variable_classes(self, field_names):
         """
-        Get the list of currently known snippet variable extension classes.
+        Given an array of field names, return back an array of all of the
+        class instances that can be used to expand out those variables at
+        runtime.
         """
-        return self._extensions.values()
+        result = []
+        for field in field_names:
+            value = self._fields.get(field, None)
+            if value is not None:
+                result.append(value.instance)
+
+        return result
 
 
-    def get_snippet_enhancements(self, trigger, content):
-        """
-        Given the tab trigger for a snippet and its contents, return back a list of
-        all of the known enhancement classes that apply to this particular snippet.
-
-        This can be an empty list if none apply.
-        """
-        classes = []
-
-        # We can only work with snippets that have a tab trigger since we only
-        # support AC type snippets, and there's no need to waste time checking if
-        # there's no body of the snippet to enhance.
-        if '' not in (trigger, content):
-            for enhancer in self.get():
-                if enhancer.is_applicable(content):
-                    classes.append(enhancer)
-
-        return classes
-
-
-    def scan_for_enhancements(self):
+    def scan_for_enhancements(self, pkg_name=None):
         """
         Scan for all of the possible snippet enhancement plugins and install
-        them. This includes installation of the enhancements that are pre
-        installed as a part of this package.
+        them, optionally constrained to only the package named. This includes
+        installation of the enhancements that are pre installed as a part of
+        this package, if there is no package name given.
         """
-        self._extensions = {}
-        self.__install_enhancements()
+        if pkg_name is not None:
+            self.discard_from_package(pkg_name)
+            log(f'recanning enhancements in {pkg_name}')
+        else:
+            self._fields = {}
+            self._modules = {}
+
+        self.__install_enhancements(pkg_name)
+
+
+    def discard_from_package(self, pkg_name):
+        """
+        Given the name of a package, find and remove all of the enhancement
+        classes that are stored within that particular class.
+        """
+        log(f'discarding all loaded enhancements from {pkg_name}')
+
+        for module in list(self._modules.keys()):
+            # Is this module is from the package we're clobbering?
+            if module.startswith(pkg_name):
+                entry = self._modules[module]
+
+                # Remove the entry from both tables
+                del self._modules[module]
+                del self._fields[entry.name]
 
 
     def __add_from_package(self, pkg, res):
@@ -137,18 +224,22 @@ class EnhancementManager():
             log(f'Unable to load enhancements from {pkg}: {str(error)}')
 
 
-    def __install_enhancements(self):
+    def __install_enhancements(self, pkg_name=None):
         """
         Scan all existing packages to see if they contain any snippet
         enhancements; if they do, then we want to import them and apply them.
         """
-        install_builtin_enhancements(self)
+        if pkg_name is None:
+            install_builtin_enhancements(self)
 
         # Look for all packages that advertise enhancements; each should have a
-        # specific file that marks them.
+        # specific file that marks them. We want to add if it is the specific
+        # package we were told is the one they're in, OR all if we were not
+        # given a particular package.
         for res in sublime.find_resources('.enhanced-snippets'):
             pkg = res.split('/')[1]
-            self.__add_from_package(pkg, res)
+            if pkg_name is None or pkg_name == pkg:
+                self.__add_from_package(pkg, res)
 
 
 ## ----------------------------------------------------------------------------

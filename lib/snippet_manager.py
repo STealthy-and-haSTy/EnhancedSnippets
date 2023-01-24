@@ -2,6 +2,7 @@ import sublime
 
 from collections import namedtuple
 from fnmatch import fnmatch
+import re
 
 import xml.etree.ElementTree as ElementTree
 
@@ -16,9 +17,14 @@ from .utils import log
 # the resource it was loaded from, the package it's contained inside of, and a
 # list of the enhancement classes that contribute to its expansion.
 Snippet = namedtuple('Snippet', [
-    'trigger', 'description', 'content', 'enhancers',
+    'trigger', 'description', 'content', 'fields',
     'scope', 'glob', 'resource', 'package'
 ])
+
+
+# The regex that matches a variable in a snippet; this doesn't validate that
+# the variable is fully valid, only that it appears to be a variable name.
+_var_regex = re.compile(r"(?:^|[^\\])\$\{?(\w+)")
 
 
 ## ----------------------------------------------------------------------------
@@ -85,21 +91,19 @@ class SnippetManager():
         """
         print("added:", added, "removed:", removed)
 
-        # TODO: This should first cause a rescan of any enhancement classes,
-        #       since they may have changed as a result of this. Most likely
-        #       we want the enhancement loader to be augmented to store the
-        #       package that the classes came from so that it can be smart
-        #       about this (we could tell it what packages to reload).
-        #
-        #       It should also use a debounce timer, if this call is not already
-        #       using one.
-        for pkg in added:
-            self.discard_pkg(pkg)
+        def perform_package_reload():
+            for pkg in added:
+                self.discard_pkg(pkg)
+                self.enhancements.discard_from_package(pkg)
 
-        for pkg in removed:
-            self.scan_pkg(pkg)
+            for pkg in removed:
+                self.scan_pkg(pkg)
+                self.enhancements.scan_for_enhancements(pkg)
 
-
+        # Defer the reload operation briefly to give the file catalog a chance
+        # to update; otherwise we won't be able to find the key file in
+        # packages that contain enhancements (when adding).
+        sublime.set_timeout(perform_package_reload, 1000)
 
 
     def discard_all(self, quiet=False):
@@ -220,12 +224,6 @@ class SnippetManager():
         """
         self.enhancements.scan_for_enhancements()
 
-        # TODO: If this causes new enhancements to be found or enhancements to
-        #       go away, then we should rescan all snippets that we know about
-        #       because they may refer to enhancements that no longer exist.
-        #
-        #       In fact we should maybe do that anyway just because if an
-        #       enhancement changes, our internal list might stay out?
 
     def scan(self):
         """
@@ -291,6 +289,15 @@ class SnippetManager():
             return True
 
         return all([view.match_selector(pt, snippet.scope) for pt in locations])
+
+
+    def get_variable_classes(self, field_names):
+        """
+        Given an array of field names, return back an array of all of the
+        class instances that can be used to expand out those variables at
+        runtime.
+        """
+        return self.enhancements.get_variable_classes(field_names)
 
 
     def match_view(self, view, locations):
@@ -363,14 +370,19 @@ class SnippetManager():
             scope = '' if scope is None else scope.text
             glob = '' if glob is None else glob.text
 
-            # Get the list of potential enhancements that we can make to this
-            # snippet, which is based on the snippet content itself.
-            enhancers = self.enhancements.get_snippet_enhancements(trigger, content)
+            # Get the list of fields from this snippet, which is a list of all
+            # of the unique variable names in the snippet, including those that
+            # are built in.
+            result = set()
+            for match in _var_regex.finditer(content):
+                result.add(match.group(1))
+
+            fields = list(result)
 
             # Get the package name that this resource is in and create a new
             # instance.
             pkg_name = res_name.split('/')[1]
-            snippet = Snippet(trigger, description, content.lstrip(), enhancers,
+            snippet = Snippet(trigger, description, content.lstrip(), fields,
                 scope, glob, res_name, pkg_name)
 
             # Link the snippet into our tables, then return

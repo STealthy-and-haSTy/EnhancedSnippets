@@ -31,23 +31,9 @@ class EnhancedSnippetBase():
     def variable_name(self):
         """
         The name of the custom variable that this particular enhancement
-        provides. The base class version of is_applicable() will use this to
-        determine if an enhancement applies to particular snippet content or
-        not.
+        provides.
         """
         return 'NONE'
-
-
-    def is_applicable(self, content):
-        """
-        Given the parsed content of a snippet, return a boolean indication of
-        wether or not there is a variable that needs to be expanded out by this
-        class or not.
-
-        The base class implementation does a regex search to see if the
-        variable exposed by this class exists in the content or not.
-        """
-        return self.regex.search(content) is not None
 
 
     def variables(self, content):
@@ -61,9 +47,6 @@ class EnhancedSnippetBase():
         The content that is returned may or may not be modified in some fashion
         depending on wether or not this enhancement requires changes in order
         to expand out the variable properly or not.
-
-        This will only get invoked if is_applicable() says that this class
-        is supposed to contribute snippet variables.
 
         The base class version returns no variables and does not modify the
         snippet content.
