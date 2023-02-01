@@ -1,0 +1,58 @@
+%YAML 1.2
+---
+# See http://www.sublimetext.com/docs/syntax.html
+name: Enhanced Snippet (YAML)
+scope: source.yaml
+version: 2
+
+extends: Packages/YAML/YAML.sublime-syntax
+
+contexts:
+  # On entry, the only thing we know how to match is the sequence that starts a
+  # new document; everything else is ignored. Matching that will shift us into
+  # the frontmatter portion of the syntax.
+  main:
+    - match: ^---
+      scope: entity.other.document.begin.yaml
+      set: frontmatter
+
+  # While we're parsing frontmatter, use the whole of the syntax, but when we
+  # see what would be starting a new document, use that to exit out to the
+  # snippet body context.
+  frontmatter:
+    - include: directive
+    - match: ^---
+      scope: entity.other.document.end.yaml
+      set: snippet-body
+    - include: node
+
+  # Once we're in the snippet body, the only rules that we care about are those
+  # that define variables.
+  snippet-body:
+    - match: "\\\\\\$"
+      scope: constant.character.escape
+    - match: "(\\$)([0-9])"
+      captures:
+        1: keyword.other.block.start
+        2: constant.numeric.snippet
+    - match: "(\\${)([0-9])(})"
+      captures:
+        1: keyword.other.block.begin
+        2: constant.numeric.snippet
+        3: keyword.other.block.end
+    - match: "\\$\\w+"
+      scope: constant.other.snippet
+    - match: "\\${\\w+}"
+      scope: constant.other.snippet
+    - match: "\\${([0-9])(:)([^}]*)}"
+      captures:
+        0: constant.other.snippet
+        1: constant.numeric.snippet
+        2: keyword.operator.alternation
+        3: string.unquoted.text-substitution
+    - match: "\\${\\w+(:)([^}]*)}"
+      captures:
+        0: constant.other.snippet
+        1: keyword.operator.alternation
+        2: string.unquoted.text-substitution
+
