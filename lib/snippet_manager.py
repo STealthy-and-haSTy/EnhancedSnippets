@@ -1,31 +1,8 @@
 import sublime
 
-from collections import namedtuple
 from fnmatch import fnmatch
-import re
 
-from EnhancedSnippets import frontmatter
-import xml.etree.ElementTree as ElementTree
-
-from .utils import log
-
-
-## ----------------------------------------------------------------------------
-
-
-# This named tuple is used to represent an enhanced snippet that we've loaded
-# in. This contains information on the snippet as a whole, and also includes
-# the resource it was loaded from, the package it's contained inside of, and a
-# list of the enhancement classes that contribute to its expansion.
-Snippet = namedtuple('Snippet', [
-    'trigger', 'description', 'content', 'fields',
-    'scope', 'glob', 'resource', 'package'
-])
-
-
-# The regex that matches a variable in a snippet; this doesn't validate that
-# the variable is fully valid, only that it appears to be a variable name.
-_var_regex = re.compile(r"(?:^|[^\\])\$\{?(\w+)")
+from .utils import log, load_snippet
 
 
 ## ----------------------------------------------------------------------------
@@ -342,61 +319,6 @@ class SnippetManager():
         return self._res_list.get(res_name, None)
 
 
-    def _do_xml_load(self, content):
-        """
-        Given the content of a resource that is expected to be a snippet, parse
-        it as XML and see if it conforms to the appropriate snippet format.
-
-        On success, a dictionary with the keys of the snippet is returned;
-        otherwise the return is None
-        """
-        try:
-            # Try to parse the content into XML, and grab out the
-            root = ElementTree.fromstring(content)
-
-            # Get the nodes for the items that we're interested in
-            trigger = root.find('tabTrigger')
-            description = root.find('description')
-            content = root.find('content')
-            scope = root.find('scope')
-            glob = root.find('glob')
-
-            return {
-                'tabTrigger': '' if trigger is None else trigger.text,
-                'description': '' if description is None else description.text,
-                'content': '' if content is None else content.text,
-                'scope': '' if scope is None else scope.text,
-                'glob': '' if glob is None else glob.text,
-            }
-
-        except:
-            pass
-
-
-    def _do_yaml_load(self, content):
-        """
-        Given the content of a resource that is expected to be a snippet, parse
-        it as a text document with YAML frontmatter to see if it conforms to
-        that format.
-
-        On success, a dictionary with the keys of the snippet is returned;
-        otherwise the return is None
-        """
-        try:
-            data = frontmatter.loads(content)
-
-            return {
-                'tabTrigger': data.get('tabTrigger', ''),
-                'description': data.get('description', ''),
-                'content': data.content or '',
-                'scope': data.get('scope', ''),
-                'glob': data.get('glob', ''),
-            }
-
-        except Exception as err:
-            pass
-
-
     def _load_snippet(self, res_name):
         """
         Given a package resource, attempt to load it as a snippet. If this
@@ -405,29 +327,9 @@ class SnippetManager():
         (which will be logged to the console).
         """
         try:
-            # Load the contents of the snippet as a string, then parse it
-            data = sublime.load_resource(res_name)
-
-            # Try and load first as XML and then YAML, since we support two
+            # Try to load in the snippet resource; this can be in one of two
             # different formats
-            p = self._do_xml_load(data) or self._do_yaml_load(data)
-            if p is None:
-                raise ValueError(f'{res_name} is not in a recognized format')
-
-            # Get the list of fields from this snippet, which is a list of all
-            # of the unique variable names in the snippet, including those that
-            # are built in.
-            result = set()
-            for match in _var_regex.finditer(p['content']):
-                result.add(match.group(1))
-
-            fields = list(result)
-
-            # Get the package name that this resource is in and create a new
-            # instance.
-            pkg_name = res_name.split('/')[1]
-            snippet = Snippet(p['tabTrigger'], p['description'], p['content'].lstrip(),
-                fields, p['scope'], p['glob'], res_name, pkg_name)
+            snippet = load_snippet(res_name, is_resource=True)
 
             # Link the snippet into our tables, then return
             log(f'adding snippet: {snippet.resource}')
