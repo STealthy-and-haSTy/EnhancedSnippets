@@ -21,6 +21,7 @@ def loaded():
     """
     es_setting.obj = sublime.load_settings("EnhancedSnippets.sublime-settings")
     es_setting.default = {
+        "use_details": True
     }
 
     # Create the settings listener, which will attach to the global preferences

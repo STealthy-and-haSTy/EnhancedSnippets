@@ -1,7 +1,7 @@
 import sublime
 import sublime_plugin
 
-
+from .core import es_setting
 from ..lib import SnippetManager, snippet_expansion_args
 
 
@@ -36,13 +36,18 @@ def _create_completions(snippet_list):
         # Get the arguments required to expand this
         snippet_args = snippet_expansion_args(snippet, SnippetManager.instance, {})
 
-        completions.append(sublime.CompletionItem.command_completion(
-            trigger=trigger,
-            command='insert_snippet',
-            args=snippet_args,
-            annotation=f"{description}",
-            kind=RES_KIND_ENHANCED_SNIPPET,
-            details='Enhanced snippet'))
+        completion = {
+            'trigger': trigger,
+            'command': 'insert_snippet',
+            'args': snippet_args,
+            'annotation': f"{description}",
+            'kind': RES_KIND_ENHANCED_SNIPPET,
+        }
+
+        if es_setting('use_details'):
+            completion['details'] = 'Enhanced Snippet'
+
+        completions.append(sublime.CompletionItem.command_completion(**completion))
 
     return completions
 

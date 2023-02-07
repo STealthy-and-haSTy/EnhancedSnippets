@@ -1,3 +1,11 @@
 {
-
+    // Should completions add a details argument to the completion items when
+    // they are added to the autocomplete panel?
+    //
+    // When this is true, detail information about what each completion is will
+    // be added to the completion, which causes the autocomplete panel to have
+    // an extra row on the bottom that describes the type of the current item.
+    //
+    // If false, this is not done.
+    "use_details": true,
 }
