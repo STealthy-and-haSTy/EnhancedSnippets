@@ -18,4 +18,5 @@ __all__ = [
     # Commands
     "EnhancedSnippetRefreshCacheCommand",
     "EnhancedSnippetRefreshEnhancementsCommand",
+    "InsertEnhancedSnippetCommand",
 ]

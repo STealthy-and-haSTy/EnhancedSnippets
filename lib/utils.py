@@ -148,4 +148,35 @@ def load_snippet(res_or_content, is_resource=True):
         resource, pkg_name)
 
 
+def snippet_expansion_args(snippet, manager, extra_args):
+    """
+    Given a loaded snippet and a dictionary with any extra variable arguments
+    that should be expanded in addition to the built in variables and those
+    that are enhancements, return a dictionary which, when passed as the
+    arguments to insert_snippet, which insert that snippet in with all of the
+    custom variables (that are known) properly expanded out
+    """
+    # Get the list of classes that are used to expand out the custom
+    # variables in this snippet.
+    enhancers = manager.get_variable_classes(snippet.fields)
+
+    # Construct the arguments that are going to be passed to the snippet
+    # command when the completion invokes.
+    #
+    # As we loop through, we adjust the content that is passed to
+    # subsequent handlers, since we may need to rewrite the snippet content
+    # in order to implement some variables.
+    snippet_args = dict(extra_args)
+    content = snippet.content
+    for enhancement in enhancers:
+        new_vars, content = enhancement.variables(content)
+        snippet_args.update(new_vars)
+
+    # Include the adjusted content into the arguments so that we can
+    # expand it.
+    snippet_args['contents'] = content.lstrip()
+
+    return snippet_args
+
+
 ## ----------------------------------------------------------------------------

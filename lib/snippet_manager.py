@@ -181,6 +181,14 @@ class SnippetManager():
         self._load_snippet(res_name)
 
 
+    def snippet_for_resource(self, res_name):
+        """
+        Given the name of a snippet resource, return back the snippet object
+        that is associated with it, or None if there is no such snippet known.
+        """
+        return self._res_list.get(res_name, None)
+
+
     def __scan_snippets(self, prefix=''):
         """
         Find and scan all snippets that are known to the package system and

@@ -2,7 +2,7 @@ import sublime
 import sublime_plugin
 
 
-from ..lib import SnippetManager
+from ..lib import SnippetManager, snippet_expansion_args
 
 
 ## ----------------------------------------------------------------------------
@@ -33,24 +33,8 @@ def _create_completions(snippet_list):
         content = snippet.content
         fields = snippet.fields
 
-        # Get the list of classes that are used to expand out the custom
-        # variables in this snippet.
-        enhancers = SnippetManager.instance.get_variable_classes(fields)
-
-        # Construct the arguments that are going to be passed to the snippet
-        # command when the completion invokes.
-        #
-        # As we loop through, we adjust the content that is passed to
-        # subsequent handlers, since we may need to rewrite the snippet content
-        # in order to implement some variables.
-        snippet_args = dict()
-        for enhancement in enhancers:
-            new_vars, content = enhancement.variables(content)
-            snippet_args.update(new_vars)
-
-        # Include the adjusted content into the arguments so that we can
-        # expand it.
-        snippet_args['contents'] = content.lstrip()
+        # Get the arguments required to expand this
+        snippet_args = snippet_expansion_args(snippet, SnippetManager.instance, {})
 
         completions.append(sublime.CompletionItem.command_completion(
             trigger=trigger,
