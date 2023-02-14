@@ -277,6 +277,16 @@ class SnippetManager():
         return all([view.match_selector(pt, snippet.scope) for pt in locations])
 
 
+    def snippet_applies(self, snippet, view, locations):
+        """
+        Given a snippet, a view, and locations within that view, return back
+        an indication of whether this snippet applies to this particular view
+        or not.
+        """
+        return (self.glob_match(view, snippet) and
+                self.scope_match(view, locations, snippet))
+
+
     def get_variable_classes(self, field_names):
         """
         Given an array of field names, return back an array of all of the
@@ -302,8 +312,7 @@ class SnippetManager():
         # is a combination of glob and scope.
         filename = view.file_name() or ''
         for snippet in self._res_list.values():
-            if (self.glob_match(view, snippet) and
-                self.scope_match(view, locations, snippet)):
+            if self.snippet_applies(snippet, view, locations):
                 result.append(snippet)
 
         return result

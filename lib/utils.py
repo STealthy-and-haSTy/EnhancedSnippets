@@ -98,7 +98,7 @@ def _do_yaml_load(content):
         pass
 
 
-def load_snippet(res_or_content, is_resource=True):
+def load_snippet(res_or_content, scope='', glob='', is_resource=True):
     """
     Given either the resource of a snippet OR some inline snippet content,
     parse it out to obtain a Snippet instance which will be returned back.
@@ -128,8 +128,8 @@ def load_snippet(res_or_content, is_resource=True):
             'tabTrigger': '',
             'description': '',
             'content': res_or_content,
-            'scope': '',
-            'glob': '',
+            'scope': scope,
+            'glob': glob,
         }
 
     # Get the list of fields from this snippet, which is a list of all
