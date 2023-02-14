@@ -8,4 +8,12 @@
     //
     // If false, this is not done.
     "use_details": true,
+
+    // When turned on, the package will generate extra debugging logic to the
+    // console that tracks what it is doing, such as loading snippets and
+    // enhancement classes, generating sublime-command files, and so on.
+    //
+    // Generally this is not interesting for end users and is only needed to
+    // diagnose problems.
+    "debug": false,
 }

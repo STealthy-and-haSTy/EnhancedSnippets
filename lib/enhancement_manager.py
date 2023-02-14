@@ -151,7 +151,7 @@ class EnhancementManager():
         """
         if pkg_name is not None:
             self.discard_from_package(pkg_name)
-            log(f'recanning enhancements in {pkg_name}')
+            log(f"rescanning enhancements in package '{pkg_name}'")
         else:
             self._fields = {}
             self._modules = {}
@@ -164,7 +164,7 @@ class EnhancementManager():
         Given the name of a package, find and remove all of the enhancement
         classes that are stored within that particular class.
         """
-        log(f'discarding all loaded enhancements from {pkg_name}')
+        log(f"discarding all loaded enhancements from package '{pkg_name}'")
 
         for module in list(self._modules.keys()):
             # Is this module is from the package we're clobbering?

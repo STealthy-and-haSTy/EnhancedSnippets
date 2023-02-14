@@ -4,7 +4,7 @@ import os
 import functools
 from fnmatch import fnmatch
 
-from .utils import log, load_snippet
+from .utils import log, debug, load_snippet
 
 
 ## ----------------------------------------------------------------------------
@@ -70,7 +70,7 @@ class SnippetManager():
         tell us which packages were added to the setting and which were removed
         from it.
         """
-        print("added:", added, "removed:", removed)
+        debug(f"ignored packages => added: {str(added)} removed: {str(removed)}")
 
         def perform_package_reload():
             for pkg in added:
@@ -148,7 +148,7 @@ class SnippetManager():
         # the below would fail.
         os.makedirs(file_folder, mode=0o777, exist_ok=True)
 
-        log(f'Writing {len(data)} entries to {filename}')
+        debug(f'Writing {len(data)} entries to {filename}')
         with open(filename, 'wt') as file:
             file.write(sublime.encode_value(data, True))
 
@@ -159,7 +159,7 @@ class SnippetManager():
         this puts everything into a completely clean state.
         """
         if not quiet:
-            log(f'discarding all snippets')
+            debug(f'discarding all snippets')
 
         # These lists are all dictionaries wherein the key is the important bit
         # of distinction (scope selector, package name or full resource path)
@@ -182,7 +182,7 @@ class SnippetManager():
         discarded = 0
         for snippet in [s for s in items if s.resource in self._res_list]:
             discarded += 1
-            log(f'discarding: {snippet.resource}')
+            debug(f'discarding: {snippet.resource}')
 
             res = snippet.resource
             pkg = snippet.package
@@ -223,7 +223,7 @@ class SnippetManager():
         Given a scope selector, remove from all of our internal lists any
         snippet that matches the selector.
         """
-        log(f'discarding all snippets matching {selector}')
+        log(f"discarding all snippets matching '{selector}'")
 
         result = []
         for scope, snippets in self._scope_list.items():
@@ -239,7 +239,7 @@ class SnippetManager():
         snippets contributed by that package.
         """
         if not quiet:
-            log(f'discarding all snippets in package {pkg_name}')
+            log(f"discarding all snippets in package '{pkg_name}'")
 
         self._discard_snippet_list(self._pkg_list.get(pkg_name, []))
 
@@ -434,7 +434,7 @@ class SnippetManager():
             snippet = load_snippet(res_name, is_resource=True)
 
             # Link the snippet into our tables, then return
-            log(f'adding snippet: {snippet.resource}')
+            debug(f'adding snippet: {snippet.resource}')
             self._res_list[snippet.resource] = snippet
             _get_list(self._scope_list, snippet.scope).append(snippet)
             _get_list(self._pkg_list, snippet.package).append(snippet)

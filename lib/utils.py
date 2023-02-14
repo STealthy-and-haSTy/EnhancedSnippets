@@ -43,6 +43,19 @@ def log(message, *args, status=False, dialog=False):
 ## ----------------------------------------------------------------------------
 
 
+def debug(message, *args, status=False, dialog=False):
+    """
+    Generate a debug log; this is functionally identical to the log method
+    except that it will only generate output if debugging is turned on.
+    """
+    from ..src.core import es_setting
+    if es_setting('debug'):
+        log(message, *args, status=status, dialog=dialog)
+
+
+## ----------------------------------------------------------------------------
+
+
 def _do_xml_load(content):
     """
     Given the content of a resource that is expected to be a snippet, parse

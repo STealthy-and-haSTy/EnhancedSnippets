@@ -1,6 +1,6 @@
 import sublime
 
-from .utils import log
+from .utils import log, debug
 
 
 ## ----------------------------------------------------------------------------
@@ -21,7 +21,7 @@ class SnippetSettingsListener():
         watch so that we can tell that they changed, and will set up the
         listener needed.
         """
-        log('initializing the settings listening code')
+        log('Listening for settings changes on ignored_packages')
         self.settings = sublime.load_settings('Preferences.sublime-settings')
 
         # Cache the list of currently ignored packages as a set, so that we can
@@ -43,7 +43,7 @@ class SnippetSettingsListener():
         this will remove its settings listener and get rid of that instance; in
         other cases it silently does nothing.
         """
-        log('settings listening code shutting down')
+        debug('settings listening code shutting down')
         self.settings.clear_on_change('_es_set')
 
 
@@ -55,7 +55,7 @@ class SnippetSettingsListener():
         The callback will be passed two arguments, the set of packages that
         have been added and the set of packages that have been removed.
         """
-        log('new settings listener client has been added')
+        debug('new settings listener client has been added')
         self.listeners.append(callback);
 
 
