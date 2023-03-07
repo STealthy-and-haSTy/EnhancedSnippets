@@ -69,7 +69,7 @@ def is_enhanced_snippet(name):
     is returned; otherwise none is returned.
     """
     spp = sublime.packages_path()
-    if name.startswith(spp) and name.endswith('.enhanced-sublime-snippet'):
+    if name and name.startswith(spp) and name.endswith('.enhanced-sublime-snippet'):
         return f'Packages/{name[len(spp)+1:]}'
 
     return None
