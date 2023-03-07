@@ -31,7 +31,6 @@ def _create_completions(snippet_list):
         trigger = snippet.trigger
         description = snippet.description
         content = snippet.content
-        fields = snippet.fields
 
         # Get the arguments required to expand this
         snippet_args = snippet_expansion_args(snippet, SnippetManager.instance, {})

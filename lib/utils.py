@@ -12,10 +12,11 @@ import xml.etree.ElementTree as ElementTree
 
 # This named tuple is used to represent an enhanced snippet that we've loaded
 # in. This contains information on the snippet as a whole, and also includes
-# the resource it was loaded from, the package it's contained inside of, and a
-# list of the enhancement classes that contribute to its expansion.
+# the core snippet properties, the resource it was loaded from, the package
+# it's contained inside of, the list of variables that need to be expanded and
+# the numeric field list.
 Snippet = namedtuple('Snippet', [
-    'trigger', 'description', 'content', 'fields',
+    'trigger', 'description', 'content', 'variables',
     'scope', 'glob', 'resource', 'package'
 ])
 
@@ -111,6 +112,19 @@ def _do_yaml_load(content):
         pass
 
 
+def _get_variables(content):
+    """
+    Return a list of all of the unique textual variables that are contained in
+    the snippet content; the list contains both built in as well as user
+    defined variables.
+    """
+    result = set()
+    for match in _var_regex.finditer(content):
+        result.add(match.group(1))
+
+    return list(result)
+
+
 def load_snippet(res_or_content, scope='', glob='', is_resource=True):
     """
     Given either the resource of a snippet OR some inline snippet content,
@@ -145,19 +159,13 @@ def load_snippet(res_or_content, scope='', glob='', is_resource=True):
             'glob': glob,
         }
 
-    # Get the list of fields from this snippet, which is a list of all
-    # of the unique variable names in the snippet, including those that
-    # are built in.
-    result = set()
-    for match in _var_regex.finditer(raw['content']):
-        result.add(match.group(1))
-
-    fields = list(result)
+    # Get the list of variables from this snippet
+    variables = _get_variables(raw['content'])
 
     # Get the package name that this resource is in and create a new
     # instance.
     return Snippet(raw['tabTrigger'], raw['description'],
-        raw['content'].lstrip(), fields, raw['scope'], raw['glob'],
+        raw['content'].lstrip(), variables, raw['scope'], raw['glob'],
         resource, pkg_name)
 
 
@@ -171,7 +179,7 @@ def snippet_expansion_args(snippet, manager, extra_args):
     """
     # Get the list of classes that are used to expand out the custom
     # variables in this snippet.
-    enhancers = manager.get_variable_classes(snippet.fields)
+    enhancers = manager.get_variable_classes(snippet.variables)
 
     # Construct the arguments that are going to be passed to the snippet
     # command when the completion invokes.
