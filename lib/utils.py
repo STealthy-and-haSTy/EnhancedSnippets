@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ElementTree
 # it's contained inside of, the list of variables that need to be expanded and
 # the numeric field list.
 Snippet = namedtuple('Snippet', [
-    'trigger', 'description', 'content', 'variables', 'fields',
+    'trigger', 'description', 'content', 'variables', 'fields', 'options',
     'scope', 'glob', 'resource', 'package'
 ])
 
@@ -48,6 +48,29 @@ def log(message, *args, status=False, dialog=False):
 ## ----------------------------------------------------------------------------
 
 
+def xml_to_dict(node):
+    """
+    Given an ElementTree node from a loaded XML object, return back a dict
+    representation.
+
+    The returned object will have a field named 'text' that is the textual
+    content of the node, as well as named fields for the attributes of the tag
+    and fields for each of the child tags.
+
+    This implementation is taken from StackOverflow, particularly an elegant
+    solution from Paamand: https://stackoverflow.com/a/68082847/814803
+    """
+    if type(node) is ElementTree.ElementTree: return xml_to_dict(node.getroot())
+    return {
+        **node.attrib,
+        'text': node.text,
+        **{e.tag: xml_to_dict(e) for e in node}
+    }
+
+
+## ----------------------------------------------------------------------------
+
+
 def debug(message, *args, status=False, dialog=False):
     """
     Generate a debug log; this is functionally identical to the log method
@@ -61,6 +84,97 @@ def debug(message, *args, status=False, dialog=False):
 ## ----------------------------------------------------------------------------
 
 
+def _yaml_field_options(raw):
+    """
+    Given the raw options value from the frontmatter section of a yaml
+    formatted snippet, return back an appropriate options object to be used as
+    a part of the snippet expansion.
+
+    This can handle getting None as an argument, in which case it is assumed
+    that there are no options.
+
+    This expects a form like:
+
+    options:
+      - field: 1
+        placeholder: 'text goes here'
+        values:
+          - value 1
+    """
+    raw = raw or []
+    result = {}
+
+    for option in raw:
+        # Pull out the values that we will be needing
+        field = option.get('field')
+        placeholder = option.get('placeholder')
+        values = option.get('values')
+
+        # If any are None, that indicates that this value is not valid.
+        # FINESSE: This should also verify that the values are an array of
+        #          strings and such.
+        if None in (field, placeholder, values):
+            raise ValueError(f'Invalid option: {option}')
+
+        # Put the placeholder into the first position, and then add the field
+        # to the result.
+        values.insert(0, placeholder or f'Value for field {field}')
+        result[str(field)] = values
+
+    return result
+
+
+## ----------------------------------------------------------------------------
+
+
+def _xml_field_options(raw):
+    """
+    Given the raw options element from an XML formatted snippet, return back an
+    appropriate options object to be used as a part of the snippet expansion.
+
+    This can handle getting None as an argument, in which case it is assumed
+    that there are no options.
+
+    This expects a form like:
+
+    <options>
+        <field>
+            <number>1</number>
+            <placeholder>The placeholder goes here</placeholder>
+            <values>
+                <string>An option goes here</string>
+                <string>Another option goes here</string>
+            </values>
+        </field>
+    </options>
+    """
+    result = {}
+    if raw is None:
+        return result
+
+    for field in raw:
+        number = field.find('number')
+        placeholder = field.find('placeholder')
+        raw_values = field.find('values')
+
+        # If any are None, that indicates that this value is not valid.
+        # FINESSE: This should also verify that the values are an array of
+        #          strings and such.
+        if None in (number, placeholder, raw_values):
+            raise ValueError(f'Invalid option: {ElementTree.tostring(field)}')
+
+        # This makes placeholder required even though maybe we want it to be
+        # optional.
+        values = [placeholder.text]
+        values.extend([e.text for e in raw_values.findall('string')])
+
+        result[str(number.text)] = values
+
+    return result
+
+## ----------------------------------------------------------------------------
+
+
 def _do_xml_load(content):
     """
     Given the content of a resource that is expected to be a snippet, parse
@@ -70,22 +184,19 @@ def _do_xml_load(content):
     otherwise the return is None
     """
     try:
-        # Try to parse the content into XML, and grab out the
-        root = ElementTree.fromstring(content)
+        txt = lambda f: parsed.get(f, {}).get('text', '')
 
-        # Get the nodes for the items that we're interested in
-        trigger = root.find('tabTrigger')
-        description = root.find('description')
-        content = root.find('content')
-        scope = root.find('scope')
-        glob = root.find('glob')
+        # Try to parse the content into XML, and grab out the fields we want.
+        # We will convert this into a dictionary for easier handling.
+        root = xml_to_dict(ElementTree.fromstring(content))
 
         return {
-            'tabTrigger': '' if trigger is None else trigger.text,
-            'description': '' if description is None else description.text,
-            'content': '' if content is None else content.text,
-            'scope': '' if scope is None else scope.text,
-            'glob': '' if glob is None else glob.text,
+            'tabTrigger': txt('tabTrigger'),
+            'description': txt('description'),
+            'content': txt('content'),
+            'scope': txt('scope'),
+            'glob': txt('glob'),
+            'options': _xml_field_options(root.find('options'))
         }
 
     except:
@@ -95,7 +206,7 @@ def _do_xml_load(content):
 def _do_yaml_load(content):
     """
     Given the content of a resource that is expected to be a snippet, parse
-    it as a text document with YAML frontmatter to see if it conforms to
+    it as a text document with YAML front matter to see if it conforms to
     that format.
 
     On success, a dictionary with the keys of the snippet is returned;
@@ -110,6 +221,7 @@ def _do_yaml_load(content):
             'content': data.content or '',
             'scope': data.get('scope', ''),
             'glob': data.get('glob', ''),
+            'options': _yaml_field_options(data.get('options'))
         }
 
     except Exception:
@@ -185,6 +297,10 @@ def load_snippet(res_or_content, scope='', glob='', is_resource=True):
             'content': res_or_content,
             'scope': scope,
             'glob': glob,
+            # NOTE: This triggers for provided content; we should probably
+            #       allow options to be provided this way or something so
+            #       someone can trigger the command with options?
+            'options': {}
         }
 
     # Get the list of variables and numeric fields from this snippet
@@ -194,7 +310,7 @@ def load_snippet(res_or_content, scope='', glob='', is_resource=True):
     # Get the package name that this resource is in and create a new
     # instance.
     return Snippet(raw['tabTrigger'], raw['description'],
-        raw['content'].lstrip(), variables, fields,
+        raw['content'].lstrip(), variables, fields, raw['options'],
         raw['scope'], raw['glob'], resource, pkg_name)
 
 
