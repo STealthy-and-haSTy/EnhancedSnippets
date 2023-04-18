@@ -16,13 +16,17 @@ import xml.etree.ElementTree as ElementTree
 # it's contained inside of, the list of variables that need to be expanded and
 # the numeric field list.
 Snippet = namedtuple('Snippet', [
-    'trigger', 'description', 'content', 'variables',
+    'trigger', 'description', 'content', 'variables', 'fields',
     'scope', 'glob', 'resource', 'package'
 ])
 
 # The regex that matches a variable in a snippet; this doesn't validate that
 # the variable is fully valid, only that it appears to be a variable name.
 _var_regex = re.compile(r"(?:^|[^\\])\$\{?(\w+)")
+
+# The regex that matches a numeric field in a snippet; validate that the field
+# is fully valid, only that it appears to be a numeric field.
+_field_regex = re.compile(r"(?:^|[^\\])\$\{?(\d+)")
 
 
 ## ----------------------------------------------------------------------------
@@ -125,6 +129,29 @@ def _get_variables(content):
     return list(result)
 
 
+def _get_fields(content):
+    """
+    Given the content of a snippet, return back an array of all of the numeric
+    fields that are present in it, in ascending order.
+
+    The result always has a "0" entry, and it's always at the end of the list
+    returned (i.e. it is in field order for expansion, not sorted order)
+    """
+    result = set()
+    for match in _field_regex.finditer(content):
+        result.add(int(match.group(1)))
+
+    # We always want a 0 element, but it needs to be last, so remove it from
+    # the set if it happens to be present.
+    if 0 in result:
+        result.remove(0)
+
+    result = sorted(result)
+    result.append(0)
+
+    return [str(field) for field in result]
+
+
 def load_snippet(res_or_content, scope='', glob='', is_resource=True):
     """
     Given either the resource of a snippet OR some inline snippet content,
@@ -145,6 +172,7 @@ def load_snippet(res_or_content, scope='', glob='', is_resource=True):
         raw = _do_xml_load(data) or _do_yaml_load(data)
         if raw is None:
             raise ValueError(f'{res_or_content} is not in a recognized format')
+
     else:
         pkg_name = ''
         resource = ''
@@ -159,14 +187,15 @@ def load_snippet(res_or_content, scope='', glob='', is_resource=True):
             'glob': glob,
         }
 
-    # Get the list of variables from this snippet
+    # Get the list of variables and numeric fields from this snippet
     variables = _get_variables(raw['content'])
+    fields = _get_fields(raw['content'])
 
     # Get the package name that this resource is in and create a new
     # instance.
     return Snippet(raw['tabTrigger'], raw['description'],
-        raw['content'].lstrip(), variables, raw['scope'], raw['glob'],
-        resource, pkg_name)
+        raw['content'].lstrip(), variables, fields,
+        raw['scope'], raw['glob'], resource, pkg_name)
 
 
 def snippet_expansion_args(snippet, manager, extra_args):
