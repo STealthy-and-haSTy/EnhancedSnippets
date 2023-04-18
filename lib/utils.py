@@ -346,3 +346,81 @@ def snippet_expansion_args(snippet, manager, extra_args):
 
 
 ## ----------------------------------------------------------------------------
+
+
+def prepare_snippet_info(view, fields, options):
+    """
+    Given a view, a list of fields, and options for those fields, update the
+    tracking information in the current view to know that is the snippet that
+    is about to be expanded.
+
+    fields is a list of all of the numeric fields as strings (e.g. "1", "2"")
+    which must be in numeric order, except for "0", which must always be
+    present and always be at the end.
+
+    options is a dictionary whose keys are field numbers and whose values are
+    arrays that list the options; the first item in the array is the
+    placeholder that explains what the field is for, and the remainder of the
+    items are the options to pick from.
+
+    If this view has any tracking information for a snippet (including any
+    regions from a previous call), they will be removed prior to the new data
+    being set in.
+    """
+    clear_snippet_info(view)
+
+    view.settings().set('_es_cache', {
+        'fields': fields,
+        'options': options,
+        'current_field_idx': 0
+    })
+
+
+def clear_snippet_info(view):
+    """
+    Clear from the passed in view all tracking information about an enhanced
+    snippet that is being expanded out.
+
+    This will remove the tracking regions along with the setting that tracks
+    the snippet details.
+    """
+    if view.settings().has('_es_cache'):
+        fields = view.settings().get('_es_cache').get('fields', [])
+        for field in fields:
+            view.erase_regions(f'_es_field_{field}')
+
+    view.settings().erase('_es_cache')
+
+
+def handle_snippet_field_move(view, direction):
+    """
+    If this view is currently in the process of expanding a special snippet,
+    then this function will jump the internal list of fields to point at the
+    correct field, and update the object accordingly.
+
+    direction can be:
+        1: if we are going to the next field
+       -1: if we are going to the previous field
+        0: if the field is staying in the same place as it currently is
+
+    Once the move happens, the field is checked to see if it is one of the
+    ones that has a special value, and if it is, we will prompt via a quick
+    panel for the text to insert.
+    """
+    data = view.settings().get('_es_cache', None)
+    if data is None:
+        return
+
+    # TODO: This should bounds check the navigation to make sure that it is
+    #       still valid; this should technically never happen because the key
+    #       binding context blocks the commands, but they could be run other
+    #       ways.
+    #
+    # Apply the direction to determine what the current field is.
+    data["current_field_idx"] = data["current_field_idx"] + direction
+    view.settings().set('_es_cache', data)
+
+    # Our picker command requires the selection to be updated, and it might not
+    # be if we were executed from a command, so schedule a call for the next
+    # loop.
+    sublime.set_timeout(lambda: view.run_command('enhanced_snippet_field_picker'))

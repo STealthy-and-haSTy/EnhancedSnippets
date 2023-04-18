@@ -3,6 +3,7 @@ import sublime_plugin
 
 from .core import es_setting
 from ..lib import SnippetManager, snippet_expansion_args
+from ..lib import clear_snippet_info, handle_snippet_field_move
 
 
 ## ----------------------------------------------------------------------------
@@ -28,18 +29,11 @@ def _create_completions(snippet_list):
     # for each of the items in the input list, create a new completion item
     # and insert it into the completions array.
     for snippet in snippet_list:
-        trigger = snippet.trigger
-        description = snippet.description
-        content = snippet.content
-
-        # Get the arguments required to expand this
-        snippet_args = snippet_expansion_args(snippet, SnippetManager.instance, {})
-
         completion = {
-            'trigger': trigger,
-            'command': 'insert_snippet',
-            'args': snippet_args,
-            'annotation': f"{description}",
+            'trigger': snippet.trigger,
+            'command': 'insert_enhanced_snippet',
+            'args': { 'name': snippet.resource },
+            'annotation': f"{snippet.description}",
             'kind': RES_KIND_ENHANCED_SNIPPET,
         }
 
@@ -81,11 +75,44 @@ class AugmentedSnippetEventListener(sublime_plugin.EventListener):
     """
     Respond to a request for completions by checking the scope of the locations
     that are provided against our list of previously loaded snippet information
-    to find those which apply to the current sitaution.
+    to find those which apply to the current situation.
 
+    We also respond to save events on files that look like active snippet
+    resources so that we can reload the files that they contain.
     We also respond to events that tell us that we should refresh the list of
     snippets.
+
+    In addition to the above, this also drives the process by which we track
+    the navigation between fields in special snippets to be able to prompt the
+    user for a multiple choice field option for some fields.
+
+    When a multiple choice snippet expands, the command that handles it will
+    set up tracking information that allows us to handle the next_field and
+    prev_field commands to know where in the snippet we are, so we can act
+    accordingly.
+
+    We track when non-special snippets are (or might be) expanding and delete
+    any tracking information we might be storing for them so that we don't take
+    actions at the wrong time.
     """
+    def _native_snippet_expand_starting(self, command, args):
+        """
+        Given a command name and (possible) argument dictionary, return an
+        indication of whether this means that a snippet expansion is starting
+        or not.
+        """
+        # These commands are a definite snippet expansion starting
+        if command in ('expand_snippet', 'commit_completion'):
+            return True
+
+        # This command MIGHT be starting an auto complete, so long as it has
+        # arguments; with no arguments it just summons the panel. With args it
+        # might start an expansion, or it might just insert some text; we don't
+        # really care either way for our purposes.
+        if command == 'auto_complete' and len(args or {}):
+            return True
+
+
     def on_query_completions(self, view, prefix, locations):
         # Respect the global setting that stops snippets from appearing in the
         # autocompletion panel
@@ -119,6 +146,20 @@ class AugmentedSnippetEventListener(sublime_plugin.EventListener):
                 view.assign_syntax('Packages/EnhancedSnippets/resources/syntax/EnhancedSnippet (YAML).sublime-syntax')
             else:
                 view.assign_syntax('Packages/EnhancedSnippets/resources/syntax/EnhancedSnippet (XML).sublime-syntax')
+
+
+    def on_text_command(self, view, command, args):
+        # Check the current command to see if it's indicating that a snippet
+        # is about to expand; if so, then we know we should stop listening to
+        # other special commands in that view.
+        if self._native_snippet_expand_starting(command, args):
+            clear_snippet_info(view)
+
+        if command == 'next_field':
+            handle_snippet_field_move(view, 1)
+
+        if command == 'prev_field':
+            handle_snippet_field_move(view, -1)
 
 
 ## ----------------------------------------------------------------------------

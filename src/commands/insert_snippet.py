@@ -2,11 +2,16 @@ import sublime
 import sublime_plugin
 
 from ...lib import log, load_snippet, SnippetManager, snippet_expansion_args
+from ...lib import prepare_snippet_info, handle_snippet_field_move
 
 
 ## ----------------------------------------------------------------------------
 
 
+# FINESSE: This should take as an argument a list of options to be used for
+#          snippet options in the same format as the loader provides so that it
+#          is possible to invoke a snippet with options without going through
+#          the AC system.
 class InsertEnhancedSnippetCommand(sublime_plugin.TextCommand):
     """
     When invoked, this drops the currently cached version of all of the
@@ -18,14 +23,24 @@ class InsertEnhancedSnippetCommand(sublime_plugin.TextCommand):
         if not ((contents is None) ^ (name is None)):
             return log("insert_enhanced_snippet should be given exactly one of 'name' or 'contents'")
 
-        # Try
+        # Get the snippet to expand; this could be from the named file or it
+        # could be raw content. If the snippet is not enhanced snippet, this
+        # will load it and return the content back for us.
         snippet = self._get_snippet(name, contents, scope, glob)
         if snippet is None:
             return log(f"insert_enhanced_snippet was unable to find/load '{name}'")
 
-        # Expand it
+        # Pull out the list of numeric fields and the options for them that we
+        # should apply and store them into the view.
+        prepare_snippet_info(self.view, snippet.fields, snippet.options)
+
+        # Expand it out now.
         snippet_args = snippet_expansion_args(snippet, SnippetManager.instance, kwargs)
         self.view.run_command('insert_snippet', snippet_args)
+
+        # Handle the case where a snippet field might be expanding out, in case
+        # it has options to prompt for.
+        handle_snippet_field_move(self.view, 0)
 
 
     def _get_snippet(self, name, contents, scope, glob):

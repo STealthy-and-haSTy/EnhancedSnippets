@@ -19,4 +19,10 @@ __all__ = [
     "EnhancedSnippetRefreshCacheCommand",
     "EnhancedSnippetRefreshEnhancementsCommand",
     "InsertEnhancedSnippetCommand",
+
+    # The commands called by InsertEnhancedSnippetCommand (or by commands it
+    # calls) that handle the actual snippet expansion
+    "EnhancedSnippetFieldPickerCommand",
+    "InsertEnhancedSnippetOptionCommand",
+    "EnhancedSnippetInsertAndMarkCommand",
 ]
