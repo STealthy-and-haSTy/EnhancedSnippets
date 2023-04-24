@@ -188,7 +188,8 @@ def _do_xml_load(content):
 
         # Try to parse the content into XML, and grab out the fields we want.
         # We will convert this into a dictionary for easier handling.
-        root = xml_to_dict(ElementTree.fromstring(content))
+        root = ElementTree.fromstring(content)
+        parsed = xml_to_dict(root)
 
         return {
             'tabTrigger': txt('tabTrigger'),
