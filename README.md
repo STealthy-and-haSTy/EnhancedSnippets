@@ -3,27 +3,58 @@
 EnhancedSnippets is a simple package (requiring Sublime Text 4) that extends
 and enhances the Snippet system in Sublime Text to include:
 
-- Creating snippets as text files with YAML Frontmatter instead of using XML
+- Creating snippets as text files with YAML front matter instead of using XML
 - Allowing snippets to be available not only by `scope` but also by `glob` (i.e.
   only if the file name matches a specific format)
-- Including the ability to add your own variables to snippets, such as `$DATE`
-  and `$CLIPBOARD` (both included by default)
+- Including the ability to add your own variables to snippets, such as `$DATE`,
+  `$BUZZWORD`, and `$CLIPBOARD` (all included by default)
 - Allow snippet fields to specify a list of options for possible values, which
   can be selected when the snippet expands.
 
-![Demo Video](https://gist.githubusercontent.com/OdatNurd/7eb659980b758c9f9ee3b5f07b3744f1/raw/f4733df7e8bf9e0f4c865638a6edce0ca60df176/EnhancedSnippetsDemo.gif)
+![Demo Video](https://gist.githubusercontent.com/OdatNurd/7eb659980b758c9f9ee3b5f07b3744f1/raw/2cbbb44d35a187f927405e9c3b5cec135334d75d/EnhancedSnippetsDemo.gif)
+
+```yaml
+---
+tabTrigger: 'wind'
+scope: 'text.html - (meta.tag | meta.character.less-than) - source.php'
+description: 'Windstorm HTML Template'
+options:
+  - field: 2
+    placeholder: 'Windstorm Version Number'
+    values:
+      - 'latest'
+      - '0.1.9'
+      - '0.1.10'
+---
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>$1</title>
+</head>
+<body>
+  <!-- Docs: https://axel669.github.io/lib.windstorm/ -->
+  <script src="https://cdn.jsdelivr.net/npm/@axel669/windstorm@${2:latest}/dist/browser.js"></script>
+
+  $0
+</body>
+</html>
+```
 
 > :warning: At the current time, this package (and this documentation) is still
 in an Alpha state; this does not mean that it's not safe but only that it is
 still being developed and so some bugs may be present and new features may be
 added. Please raise an issue if you run into any problems or have suggestions.
 
+
 ## Installation
 
 This package is not officially a part of Package Control. The recommended (and
 supported) way of installing this package is to use `Package Control: Add Repository`
 from the command palette, and enter the following URL, then use
-`Package Control: Install Package` and select the package from the list:
+`Package Control: Install Package` and select the package `EnhancedSnippets`
+from the list:
 
 ```
 https://raw.githubusercontent.com/STealthy-and-haSTy/SublimePackages/master/unreleased-packages.json
@@ -35,11 +66,12 @@ sure, try to install the package and see if it's visible first. Remember that
 packages that are already installed will not appear in the list of available
 packages to install.
 
+
 ## In a Nutshell
 
-`EnhancedSnippets` adds support for a new snippet file extension, `enhanced- sublime-snippet`;
+`EnhancedSnippets` adds support for a new snippet file extension, `enhanced-sublime-snippet`;
 this can be in either the standard `XML` file format of regular
-`sublime- snippet` files, or you can use a text file with YAML Frontmatter to
+`sublime-snippet` files, or you can use a text file with YAML front matter to
 create snippets in an easier to read way. ***EnhancedSnippets will only load
 and recognize files of the `enhanced-sublime-snippet` extension!***
 
@@ -52,7 +84,7 @@ has the following extra capabilities; examples of all of these are outlined in
 the following section.
 
  - Snippets can be defined both as XML and in a plain text format with a YAML
-   Frontmatter section; the extension is `enhanced-sublime-snippet` in either
+   front matter section; the extension is `enhanced-sublime-snippet` in either
    case. Syntax definitions (currently rudimentary) are available out of the
    box.
  - You can include a `<glob>` tag to constrain the snippet only to files that
@@ -88,21 +120,22 @@ proident, sunt in culpa qui officia deserunt mollit anim id est laborum.]]></con
 </snippet>
 ```
 
-Or, optionally, as a text file with YAML frontmatter:
+Or, optionally, as a text file with YAML front matter:
 
 ```yaml
 ---
-tabTrigger: lorem
-scope: -source
-description: Lorem ipsum
+tabTrigger: 'lorem'
+scope: '-source'
+description: 'Lorem ipsum'
 ---
 Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
 tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
 quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
 consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
 cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-proident, sunt in culpa qui officia deserunt mollit anim id est laborum.]
+proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 ```
+
 
 ### Glob Extensions
 
@@ -131,10 +164,10 @@ class ${1:classname}(unittest.TestCase):
 
 ```yaml
 ---
-tabTrigger: test
-description: Create unit test
-scope: source.python
-glob: test_*.py
+tabTrigger: 'test'
+description: 'Create unit test'
+scope: 'source.python'
+glob: 'test_*.py'
 ---
 class ${1:classname}(unittest.TestCase):
 
@@ -142,6 +175,7 @@ class ${1:classname}(unittest.TestCase):
         # Test Body Here
         $0
 ```
+
 
 ### New Variables
 
@@ -170,13 +204,14 @@ Examples of `$BUZZWORD` in a snippet:
 - ${BUZZWORD} will expand out to a single buzzword sentence
 - `${BUZZWORD:5}` will expand out to five buzzword sentences
 
+
 ### Snippet Options
 
 Numeric snippet fields can be given a list of optional values. Whenever the
 snippet navigation lands on a numeric field with a value, a quick panel will
 open to display the list of available options. Choosing an option from the list
 will insert that text and immediately jump to the next field. You can also
-press `Escape` to close the panel and type your own freeform text.
+press `Escape` to close the panel and type your own free-form text.
 
 How you specify the options depends on the file format that you're using:
 
@@ -199,18 +234,19 @@ How you specify the options depends on the file format that you're using:
 
 ```yaml
 ---
-tabTrigger: wind
-scope: text.html - (meta.tag | meta.characer.less-than) - source.php
-description: Windstorm HTML Template
+tabTrigger: 'wind'
+scope: 'text.html - (meta.tag | meta.character.less-than) - source.php'
+description: 'Windstorm HTML Template'
 options:
   - field: 2
     placeholder: 'Windstorm Version Number'
     values:
-      - latest
-      - 0.1.9
-      - 0.1.10
+      - 'latest'
+      - '0.1.9'
+      - '0.1.10'
 ---
 ```
+
 
 ## Adding New Variables
 
@@ -245,28 +281,50 @@ An example of a module that adds variables:
 import sublime
 import sublime_plugin
 
+from datetime import datetime
+
+
 from EnhancedSnippets.lib import EnhancedSnippetBase
-
-
-class LordFokasSnippet(EnhancedSnippetBase):
-    def variable_name(self):
-        return 'FOKAS'
-
-    def variables(self, content):
-        return {
-            'FOKAS': 'The lord of us all'
-        }, content
 
 
 class AxelSnippet(EnhancedSnippetBase):
     def variable_name(self):
         return 'AXEL'
 
+
     def variables(self, content):
         return {
             'AXEL': 'Has the biggest brain of us all'
         }, content
 
+
+class InsertDateSnippet(EnhancedSnippetBase):
+    """
+    This snippet enhancement class provides the ability to expand out variables
+    into the current date and time. If a default value is provided for this
+    variable, it is interpreted as a date format string.
+    """
+    def variable_name(self):
+        return 'DATE'
+
+
+    def variables(self, content):
+        today = datetime.today()
+        variables = {
+            'DATE': today.strftime('%x')
+        }
+
+        def add_variable(match):
+            fmt = match.group(1)
+            var = 'DATE'
+            if fmt is not None and fmt != ':':
+                var = f"DATE_{len(variables)}"
+                variables[var] = today.strftime(fmt[1:])
+
+            return f'${{{var}}}'
+
+        content = self.regex.sub(add_variable, content)
+        return variables, content
 ```
 
 - `variable_name` should return the name of the variable that your extension
