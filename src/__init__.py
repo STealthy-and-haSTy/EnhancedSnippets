@@ -25,4 +25,7 @@ __all__ = [
     "EnhancedSnippetFieldPickerCommand",
     "InsertEnhancedSnippetOptionCommand",
     "EnhancedSnippetInsertAndMarkCommand",
+
+    # Utility Commands
+    "NewEnhancedSnippetCommand",
 ]

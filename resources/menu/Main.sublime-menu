@@ -1,4 +1,20 @@
 [
+  {
+    "caption": "Tools",
+    "mnemonic": "T",
+    "id": "tools",
+    "children":
+    [
+      {
+        "caption": "Enhanced Snippets",
+        "children":
+        [
+          { "command": "new_enhanced_snippet", "caption": "New Enhanced Snippet…" },
+        ]
+      },
+    ]
+  },
+
   { "id": "preferences",
     "children": [
       { "caption": "Package Settings",
