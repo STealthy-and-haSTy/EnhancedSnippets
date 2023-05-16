@@ -31,7 +31,7 @@ class InsertEnhancedSnippetOptionCommand(sublime_plugin.TextCommand):
                 # it later.
                 self.view.run_command('enhanced_snippet_insert_and_mark', {
                     'field': field,
-                    'characters': options[idx]
+                    'characters': options[idx].trigger
                 })
 
                 # If this is not the last field, skip to the next one; because
@@ -55,6 +55,10 @@ class InsertEnhancedSnippetOptionCommand(sublime_plugin.TextCommand):
         self.view.add_regions('_es_cursors', [r for r in self.view.sel()],
                               scope='comment',
                               flags=sublime.DRAW_NO_FILL|sublime.DRAW_EMPTY)
+
+        options = [sublime.QuickPanelItem(t.get('text', 'snippet values are borked'),
+                                          details=t.get('details', ''))
+                   for t in options]
 
         # Show the quick panel to allow the user to pick from the options that
         # we were given.

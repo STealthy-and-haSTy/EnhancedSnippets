@@ -99,7 +99,16 @@ def _yaml_field_options(raw):
       - field: 1
         placeholder: 'text goes here'
         values:
-          - value 1
+          - 'value 1'
+          - text: 'value 2'
+            details: 'the details on this item'
+
+    The items specified in the values array can be either single strings, or
+    objects that provide text and optional details. Items that are just strings
+    are inferred t be objects that contain text but no details.
+
+    When provided, the details are used in the panel to describe the item when
+    the list is offered. It is valid to provide no details.
     """
     raw = raw or []
     result = {}
@@ -108,13 +117,19 @@ def _yaml_field_options(raw):
         # Pull out the values that we will be needing
         field = option.get('field')
         placeholder = option.get('placeholder')
-        values = option.get('values')
+        values = option.get('values', [])
 
         # If any are None, that indicates that this value is not valid.
-        # FINESSE: This should also verify that the values are an array of
-        #          strings and such.
         if None in (field, placeholder, values):
             raise ValueError(f'Invalid option: {option}')
+
+        # The items in the values list can either be strings, or objects that
+        # have a required 'text' key and an optional 'details' key. Iterate
+        # through the list and convert to the object format.
+        #
+        # FINESSE: This should also verify that the values are correctly
+        #          formatted.
+        values = [{"text": t} if isinstance(t, str) else t for t in values]
 
         # Put the placeholder into the first position, and then add the field
         # to the result.
@@ -163,10 +178,17 @@ def _xml_field_options(raw):
         if None in (number, placeholder, raw_values):
             raise ValueError(f'Invalid option: {ElementTree.tostring(field)}')
 
+        # In YAML files, the values can be either strings or objects; here in
+        # the XML snippets we only support strings, but we still need to
+        # convey the same objects as for the other snippet variety.
+        #
+        # FINESSE: This should also verify that the values are correctly
+        #          formatted.
+        #
         # This makes placeholder required even though maybe we want it to be
         # optional.
         values = [placeholder.text]
-        values.extend([e.text for e in raw_values.findall('string')])
+        values.extend([{"text": e.text} for e in raw_values.findall('string')])
 
         result[str(number.text)] = values
 
