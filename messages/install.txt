@@ -1,0 +1,61 @@
+EnhancedSnippets is a simple package that extends and enhances the
+Snippet system in Sublime Text to include:
+
+- Snippets as text files with YAML front matter instead of using XML
+- Snippets can be made available not only scope but also by filename
+- The ability to add your own custom variables to snippets via plugins
+- Field values can be chosen from a custom, multiple choice list
+
+
+NOTE: This package is still under development and is not feature
+      complete, but is still functional. If you find any problems or
+      have any additional feature suggestions, please report them at:
+        https://github.com/STealthy-and-haSTy/EnhancedSnippets/issues
+
+
+Quick Start
+-----------
+
+Use "Tools > Enhanced Snippets > New Enhanced Snippet..." from the
+menu or the Command Palette to create a new snippet template. This
+works similar to the internal command for creating a new snippet
+template.
+
+The fields available in the YAML frontmatter (all OPTIONAL) are:
+
+ - "tabTrigger": the text to trigger the snippet via AutoComplete
+ - "description": descriptive text; visible in AC and the Command Palette
+ - "scope": the snippet only expands in this scope
+ - "glob": the snippet only expanding in files that match this spec
+ - "options": multiple choice values for specific fields
+
+Optional are in the form:
+
+    options:
+      - field: 2
+        placeholder: "possible values for field 2"
+        values:
+          - "an enhanced snippet"
+          - text: "a second optional value"
+            details: "the second value in the list"
+
+This specifies two options for the ${2} field, one being plain text
+with no description and one being text with extra description.
+
+When the snippet expands and lands on the second field, a quick panel
+is displayed to prompt you for the choice.
+
+
+Additional Variables
+--------------------
+
+EnhancedSnippets comes with the following additional variables that
+can be used in your snippet expansions:
+
+ - ${DATE} will insert the current date and time
+ - ${CLIPBOARD} will insert the text currently on the clipboard
+ - ${BUZZWORD} will insert some buzzword compliant Lorem Ipsum
+
+Adding additional variables is possible via plugins, but this is not
+currently documented; see the source code for examples if you're
+curious.
