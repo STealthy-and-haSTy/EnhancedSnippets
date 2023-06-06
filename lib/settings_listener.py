@@ -21,6 +21,30 @@ class SnippetSettingsListener():
         watch so that we can tell that they changed, and will set up the
         listener needed.
         """
+        # Set up a list for registered callbacks; any functions in this list
+        # when the settings change in a way that we care about will be called
+        # with details on the change.
+        self.listeners = []
+
+        # When loading the package from a packed package file under Linux, the
+        # load_settings() call (when called from plugin_loaded()) seems to
+        # return an empty settings object, which wreaks havoc. To get around
+        # this forthe time being, we defer the actual settings listener setup
+        # until the host gets out of the current event cycle.
+        #
+        # This does not seem to happen under Linux when the packge is unpacked,
+        # or on Windows even if it is packed, so it seems like it may be OS
+        # specific, though this has not been fully investigated as of yet.
+        return sublime.set_timeout(self._deferred_init)
+
+
+    def _deferred_init(self):
+        """
+        Does the actual work of setting up the settings listener; this used to
+        be in __init__, but it fails on package load from a sublime-package
+        file under Linux because the settings object's methods always return
+        None.
+        """
         log('Listening for settings changes on ignored_packages')
         self.settings = sublime.load_settings('Preferences.sublime-settings')
 
@@ -30,11 +54,6 @@ class SnippetSettingsListener():
 
         # Listen for changes in settings.
         self.settings.add_on_change('_es_set', self.__settings_update)
-
-        # Set up a list for registered callbacks; any functions in this list
-        # when the settings change in a way that we care about will be called
-        # with details on the change.
-        self.listeners = []
 
 
     def shutdown(self):
