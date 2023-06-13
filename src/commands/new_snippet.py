@@ -3,6 +3,7 @@ import sublime_plugin
 
 import os
 
+from ..core import es_syntax
 from Default.new_templates import reformat
 
 
@@ -15,7 +16,7 @@ class NewEnhancedSnippetCommand(sublime_plugin.WindowCommand):
     appropriate default location for user created snippets.
     """
     def run(self):
-        view = self.window.new_file(syntax='Packages/EnhancedSnippets/resources/syntax/EnhancedSnippet (YAML).sublime-syntax')
+        view = self.window.new_file(syntax=es_syntax('EnhancedSnippet'))
         view.settings().set('default_dir', os.path.join(sublime.packages_path(), 'User'))
         view.settings().set('default_extension', 'enhanced-sublime-snippet')
 

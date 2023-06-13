@@ -1,7 +1,7 @@
 %YAML 1.2
 ---
 # See http://www.sublimetext.com/docs/syntax.html
-name: Enhanced Snippet (YAML)
+name: Enhanced Snippet
 scope: source.yaml
 version: 2
 

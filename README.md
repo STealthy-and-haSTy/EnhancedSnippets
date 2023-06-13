@@ -5,7 +5,7 @@ and enhances the Snippet system in Sublime Text to include:
 
 - Creating snippets as text files with YAML front matter instead of using XML
 - Allowing snippets to be available not only by `scope` but also by `glob` (i.e.
-  only if the file name matches a specific format)
+  only if the file name matches a specific format), or optionally both
 - Including the ability to add your own variables to snippets, such as `$DATE`,
   `$BUZZWORD`, and `$CLIPBOARD` (all included by default)
 - Allow snippet fields to specify a list of options for possible values, which
@@ -22,9 +22,11 @@ options:
   - field: 2
     placeholder: 'Windstorm Version Number'
     values:
+      - '0.1.17'
+      - '0.1.16'
+      - '0.1.15'
+      - '0.1.14'
       - 'latest'
-      - '0.1.9'
-      - '0.1.10'
 ---
 <!DOCTYPE html>
 <html>
@@ -69,9 +71,8 @@ packages to install.
 
 ## In a Nutshell
 
-`EnhancedSnippets` adds support for a new snippet file extension, `enhanced-sublime-snippet`;
-this can be in either the standard `XML` file format of regular
-`sublime-snippet` files, or you can use a text file with YAML front matter to
+`EnhancedSnippets` adds support for a new snippet file extension,
+`enhanced-sublime-snippet`; this is a text file with YAML front matter to help
 create snippets in an easier to read way. ***EnhancedSnippets will only load
 and recognize files of the `enhanced-sublime-snippet` extension!***
 
@@ -83,13 +84,9 @@ In addition to the properties that a normal snippet has, an enhanced snippet
 has the following extra capabilities; examples of all of these are outlined in
 the following section.
 
- - Snippets can be defined both as XML and in a plain text format with a YAML
-   front matter section; the extension is `enhanced-sublime-snippet` in either
-   case. Syntax definitions (currently rudimentary) are available out of the
-   box.
- - You can include a `<glob>` tag to constrain the snippet only to files that
+ - You can include a `glob` key to constrain the snippet only to files that
    match the glob;  this can be used instead of, or in addition to, the normal
-   `<scope>` tag.
+   `scope` key.
  - There is an API that allows for the creation of new snippet variables; such
    variables are available any time the snippet expands, including when
    triggered via AutoComplete. Out of the box, the `$DATE`, `$CLIPBOARD` and
@@ -101,26 +98,9 @@ the following section.
 
 ## Examples
 
-### File Formats
+### File Format
 
-The `enhanced-sublime-snippet` file can be created in the normal `XML` format
-of a normal `sublime-snippet`:
-
-```xml
-<snippet>
-    <description>Lorem ipsum</description>
-    <content><![CDATA[Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-proident, sunt in culpa qui officia deserunt mollit anim id est laborum.]]></content>
-    <tabTrigger>lorem</tabTrigger>
-    <scope>-source</scope>
-</snippet>
-```
-
-Or, optionally, as a text file with YAML front matter:
+The `enhanced-sublime-snippet` file is a text file with YAML front matter:
 
 ```yaml
 ---
@@ -139,28 +119,12 @@ proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
 ### Glob Extensions
 
-Normal snippets can use the `<scope>` tag to specify a scope that they apply
-to. Enhanced Snippets can also include `<glob>` (or `glob:`) to specify a
-filename glob which must match the current file in order for the snippet to be
-available. This can be used instead of or in addition to the normal `scope`
-handling, and allows you to further constrain snippets, such as the declaration
-for a unit test, which is only required in certain files.
-
-```xml
-<snippet>
-    <content><![CDATA[
-class ${1:classname}(unittest.TestCase):
-
-    def test_${2:method}(self):
-        # Test Body Here
-        $0
-]]></content>
-    <tabTrigger>test</tabTrigger>
-    <description>Create unit test</description>
-    <scope>source.python</scope>
-    <glob>test_*.py</glob>
-</snippet>
-```
+Normal snippets can use the `scope` key to specify a scope that they apply
+to. Enhanced Snippets can also include `glob:` to specify a filename glob which
+must match the current file in order for the snippet to be available. This can
+be used instead of or in addition to the normal `scope` handling, and allows
+you to further constrain snippets, such as the declaration for a unit test,
+which is only required in certain files.
 
 ```yaml
 ---
@@ -215,23 +179,6 @@ press `Escape` to close the panel and type your own free-form text.
 
 How you specify the options depends on the file format that you're using:
 
-```xml
-    <tabTrigger>wind</tabTrigger>
-    <description>Windstorm HTML Template</description>
-    <scope>text.html - (meta.tag | meta.characer.less-than) - source.php</scope>
-    <options>
-        <field>
-            <number>2</number>
-            <placeholder>Windstorm Version Number</placeholder>
-            <values>
-                <string>latest</string>
-                <string>0.1.9</string>
-                <string>0.1.10</string>
-            </values>
-        </field>
-    </options>
-```
-
 ```yaml
 ---
 tabTrigger: 'wind'
@@ -241,9 +188,9 @@ options:
   - field: 2
     placeholder: 'Windstorm Version Number'
     values:
+      - '0.1.17'
+      - '0.1.16'
       - 'latest'
-      - '0.1.9'
-      - '0.1.10'
 ---
 ```
 
@@ -268,7 +215,7 @@ which you would like to include variables:
 Every time enhancements are loaded (which, roughly speaking, is when
 `EnhancedSnippets` loads, you use the `Refresh Enhancements Cache` command from
 the command palette, or a new package is installed) the module declared in the
-file will be loaded, and all classes in the module that are subclasses of
+file will be loaded, and all classes in the module that are sub-classes of
 `EnhancedSnippetBase` are loaded and used to provide variables.
 
 > :warning: The module is only loaded, not force reloaded; if you modify the

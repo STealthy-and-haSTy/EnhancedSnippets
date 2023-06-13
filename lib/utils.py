@@ -4,7 +4,6 @@ from collections import namedtuple
 import re
 
 from EnhancedSnippets import frontmatter
-import xml.etree.ElementTree as ElementTree
 
 
 ## ----------------------------------------------------------------------------
@@ -43,29 +42,6 @@ def log(message, *args, status=False, dialog=False):
         sublime.status_message(message)
     if dialog:
         sublime.message_dialog(message)
-
-
-## ----------------------------------------------------------------------------
-
-
-def xml_to_dict(node):
-    """
-    Given an ElementTree node from a loaded XML object, return back a dict
-    representation.
-
-    The returned object will have a field named 'text' that is the textual
-    content of the node, as well as named fields for the attributes of the tag
-    and fields for each of the child tags.
-
-    This implementation is taken from StackOverflow, particularly an elegant
-    solution from Paamand: https://stackoverflow.com/a/68082847/814803
-    """
-    if type(node) is ElementTree.ElementTree: return xml_to_dict(node.getroot())
-    return {
-        **node.attrib,
-        'text': node.text,
-        **{e.tag: xml_to_dict(e) for e in node}
-    }
 
 
 ## ----------------------------------------------------------------------------
@@ -142,90 +118,6 @@ def _yaml_field_options(raw):
 ## ----------------------------------------------------------------------------
 
 
-def _xml_field_options(raw):
-    """
-    Given the raw options element from an XML formatted snippet, return back an
-    appropriate options object to be used as a part of the snippet expansion.
-
-    This can handle getting None as an argument, in which case it is assumed
-    that there are no options.
-
-    This expects a form like:
-
-    <options>
-        <field>
-            <number>1</number>
-            <placeholder>The placeholder goes here</placeholder>
-            <values>
-                <string>An option goes here</string>
-                <string>Another option goes here</string>
-            </values>
-        </field>
-    </options>
-    """
-    result = {}
-    if raw is None:
-        return result
-
-    for field in raw:
-        number = field.find('number')
-        placeholder = field.find('placeholder')
-        raw_values = field.find('values')
-
-        # If any are None, that indicates that this value is not valid.
-        # FINESSE: This should also verify that the values are an array of
-        #          strings and such.
-        if None in (number, placeholder, raw_values):
-            raise ValueError(f'Invalid option: {ElementTree.tostring(field)}')
-
-        # In YAML files, the values can be either strings or objects; here in
-        # the XML snippets we only support strings, but we still need to
-        # convey the same objects as for the other snippet variety.
-        #
-        # FINESSE: This should also verify that the values are correctly
-        #          formatted.
-        #
-        # This makes placeholder required even though maybe we want it to be
-        # optional.
-        values = [placeholder.text]
-        values.extend([{"text": e.text} for e in raw_values.findall('string')])
-
-        result[str(number.text)] = values
-
-    return result
-
-## ----------------------------------------------------------------------------
-
-
-def _do_xml_load(content):
-    """
-    Given the content of a resource that is expected to be a snippet, parse
-    it as XML and see if it conforms to the appropriate snippet format.
-
-    On success, a dictionary with the keys of the snippet is returned;
-    otherwise the return is None
-    """
-    try:
-        txt = lambda f: parsed.get(f, {}).get('text', '')
-
-        # Try to parse the content into XML, and grab out the fields we want.
-        # We will convert this into a dictionary for easier handling.
-        root = ElementTree.fromstring(content)
-        parsed = xml_to_dict(root)
-
-        return {
-            'tabTrigger': txt('tabTrigger'),
-            'description': txt('description'),
-            'content': txt('content'),
-            'scope': txt('scope'),
-            'glob': txt('glob'),
-            'options': _xml_field_options(root.find('options'))
-        }
-
-    except:
-        pass
-
-
 def _do_yaml_load(content):
     """
     Given the content of a resource that is expected to be a snippet, parse
@@ -299,12 +191,10 @@ def load_snippet(res_or_content, scope='', glob='', is_resource=True):
         pkg_name = res_or_content.split('/')[1]
         resource = res_or_content
 
-        # Load the contents of the snippet as a string, then parse it
+        # Load the contents of the snippet as a string, then parse it as a
+        # YAML snippet.
         data = sublime.load_resource(res_or_content)
-
-        # Try and load first as XML and then YAML, since we support two
-        # different formats
-        raw = _do_xml_load(data) or _do_yaml_load(data)
+        raw = _do_yaml_load(data)
         if raw is None:
             raise ValueError(f'{res_or_content} is not in a recognized format')
 

@@ -59,3 +59,13 @@ def es_setting(key):
 
 
 ## ---------------------------------------------------------------------------
+
+
+def es_syntax(file):
+    """
+    Return the full name of an Enhanced Snippet syntax based on the short name.
+    """
+    return f"Packages/EnhancedSnippets/resources/syntax/{file}.sublime-syntax"
+
+
+## ---------------------------------------------------------------------------

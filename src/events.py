@@ -1,7 +1,7 @@
 import sublime
 import sublime_plugin
 
-from .core import es_setting
+from .core import es_setting, es_syntax
 from ..lib import SnippetManager, snippet_expansion_args
 from ..lib import clear_snippet_info, handle_snippet_field_move
 
@@ -43,14 +43,6 @@ def _create_completions(snippet_list):
         completions.append(sublime.CompletionItem.command_completion(**completion))
 
     return completions
-
-
-def _is_yaml_snippet(view):
-    """
-    Checks to see if the content of a view that represents an enhanced snippet
-    appears to be the YAML variety, and returns True or False accordingly.
-    """
-    return view.substr(sublime.Region(0, 3)) == '---'
 
 
 def is_enhanced_snippet(name):
@@ -127,25 +119,20 @@ class AugmentedSnippetEventListener(sublime_plugin.EventListener):
         # When a file loads, if it's an enhanced snippet and the first three
         # characters are the start of a frontmatter, then assign the alternate
         # syntax to it.
-        res_name = is_enhanced_snippet(view.file_name())
-        if res_name and _is_yaml_snippet(view):
-            view.assign_syntax('Packages/EnhancedSnippets/resources/syntax/EnhancedSnippet (YAML).sublime-syntax')
+        if is_enhanced_snippet(view.file_name()):
+            view.assign_syntax(es_syntax('EnhancedSnippet'))
 
 
     def on_post_save(self, view):
         # Any time a saved file represents a snippet resource, reload that
         # snippet. We also check to see what the content of the file looks like
         # and make sure the correct syntax is applied.
-        #
-        # TODO: The syntax application is ham-handed; it should only happen in
-        #       cases it needs to (like if that is not already the syntax).
         res_name = is_enhanced_snippet(view.file_name())
         if res_name:
             SnippetManager.instance.reload_snippet(res_name)
-            if _is_yaml_snippet(view):
-                view.assign_syntax('Packages/EnhancedSnippets/resources/syntax/EnhancedSnippet (YAML).sublime-syntax')
-            else:
-                view.assign_syntax('Packages/EnhancedSnippets/resources/syntax/EnhancedSnippet (XML).sublime-syntax')
+            syntax = es_syntax('EnhancedSnippet')
+            if view.settings().get("syntax") != syntax:
+                view.assign_syntax(syntax)
 
 
     def on_text_command(self, view, command, args):
