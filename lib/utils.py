@@ -60,6 +60,79 @@ def debug(message, *args, status=False, dialog=False):
 ## ----------------------------------------------------------------------------
 
 
+def _get_key(key, data, default, datatype):
+    """
+    Look in the given data dictionary for the value of the provided key, and
+    return it back. The value of the key is validated to be of the type
+    provided.
+
+    If the key is not present, the value will be the default provided instead.
+
+    If the value of the key is None even after applying the default provided,
+    an error will be raised to indicate that the field is missing.
+
+    If the key is not of the type provided, an error is raised in order to
+    provide information on what was expected.
+
+    In all other cases, the return is the value of the key (or the default),
+    which are guaranteed to be of the type provided.
+    """
+    value = data.get(key, default)
+    if not isinstance(value, datatype):
+        if value is None:
+            raise ValueError(f"snippet key '{key}' is missing (should be {datatype.__name__})")
+
+        raise ValueError(f"snippet key '{key}' is a {type(value).__name__} (expected {datatype.__name__})")
+
+    return value
+
+
+def _validate_snippet_options(options):
+    """
+    Validate that the list of options that is provided is valid; in order for
+    this to be the case:
+      - The list must not be empty
+      - every item in the list must be an object
+      - each object in the list MUST have a 'text' key that is a string
+      - each object in the list MAY have a 'details' key that is a string
+
+    The returned list is guaranteed to contain only valid items, and may be
+    different from the input list as extra values in the dictionary will be
+    culled.
+    """
+    if not options:
+        raise ValueError('the list of field options may not be empty')
+
+    result = []
+    for entry in options:
+        # Ensure that the item is an object
+        if not isinstance(entry, dict):
+            raise ValueError(f'invalid snippet option; must be a string or an object (got {type(entry).__name__})')
+
+        # Get the two values out of the object that we care about
+        text = entry.get('text')
+        details = entry.get('details')
+
+        # The text field must exist and be a string
+        if not isinstance(text, str):
+            if text is None:
+                raise ValueError(f"the 'text' fields of option values are required (should be {str.__name__})")
+            raise ValueError(f"option value 'text' fields must be strings (got {type(text).__name__})")
+
+        # If the details exist, they must be a string
+        if details is not None and not isinstance(details, str):
+            raise ValueError(f"option value 'details' must be strings if provided (got {type(details).__name__})")
+
+        # Looks good; create a new object as a shortcut for having to delete
+        # all keys but the two we care about.
+        result.append({
+            "text": text,
+            "details": details
+        })
+
+    return result
+
+
 def _yaml_field_options(raw):
     """
     Given the raw options value from the frontmatter section of a yaml
@@ -90,22 +163,19 @@ def _yaml_field_options(raw):
     result = {}
 
     for option in raw:
-        # Pull out the values that we will be needing
-        field = option.get('field')
-        placeholder = option.get('placeholder')
-        values = option.get('values', [])
-
-        # If any are None, that indicates that this value is not valid.
-        if None in (field, placeholder, values):
-            raise ValueError(f'Invalid option: {option}')
+        # Pull out the values that we will be needing; all of these are
+        # required except for the placeholder, which will be inferred if it is
+        # not present.
+        field = _get_key('field', option, None, int)
+        placeholder = _get_key('placeholder', option, '', str)
+        values = _get_key('values', option, None, list)
 
         # The items in the values list can either be strings, or objects that
         # have a required 'text' key and an optional 'details' key. Iterate
         # through the list and convert to the object format.
-        #
-        # FINESSE: This should also verify that the values are correctly
-        #          formatted.
-        values = [{"text": t} if isinstance(t, str) else t for t in values]
+        values = _validate_snippet_options([
+            {"text": t} if isinstance(t, str) else t for t in values]
+        )
 
         # Put the placeholder into the first position, and then add the field
         # to the result.
@@ -131,16 +201,16 @@ def _do_yaml_load(content):
         data = frontmatter.loads(content)
 
         return {
-            'tabTrigger': data.get('tabTrigger', ''),
-            'description': data.get('description', ''),
+            'tabTrigger': _get_key('tabTrigger', data, '', str),
+            'description': _get_key('description', data, '', str),
             'content': data.content or '',
-            'scope': data.get('scope', ''),
-            'glob': data.get('glob', ''),
+            'scope': _get_key('scope', data, '', str),
+            'glob': _get_key('glob', data, '', str),
             'options': _yaml_field_options(data.get('options'))
         }
 
-    except Exception:
-        pass
+    except ValueError as error:
+        log(f'Error loading snippet: {str(error)}')
 
 
 def _get_variables(content):
@@ -196,7 +266,7 @@ def load_snippet(res_or_content, scope='', glob='', is_resource=True):
         data = sublime.load_resource(res_or_content)
         raw = _do_yaml_load(data)
         if raw is None:
-            raise ValueError(f'{res_or_content} is not in a recognized format')
+            raise ValueError(f'{res_or_content} is invalid or not in a recognized format')
 
     else:
         pkg_name = ''
