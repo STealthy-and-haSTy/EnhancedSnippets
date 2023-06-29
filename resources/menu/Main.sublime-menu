@@ -9,7 +9,15 @@
         "caption": "Enhanced Snippets",
         "children":
         [
-          { "command": "new_enhanced_snippet", "caption": "New Enhanced Snippet…" },
+          { "caption": "New Enhanced Snippet…",
+            "command": "new_enhanced_snippet"
+          },
+          { "caption": "Convert current view to Enhanced Snippet",
+            "command": "convert_to_enhanced_snippet",
+            "args": {
+              "hide_when_disabled": false
+            }
+          },
         ]
       },
     ]

@@ -1,0 +1,5 @@
+[
+    { "caption": "-" },
+    { "caption": "EnhancedSnippets: Convert to Enhanced Snippet", "command": "convert_to_enhanced_snippet" },
+    { "caption": "-" },
+]

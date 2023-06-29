@@ -129,10 +129,13 @@ class AugmentedSnippetEventListener(sublime_plugin.EventListener):
         # and make sure the correct syntax is applied.
         res_name = is_enhanced_snippet(view.file_name())
         if res_name:
-            SnippetManager.instance.reload_snippet(res_name)
-            syntax = es_syntax('EnhancedSnippet')
-            if view.settings().get("syntax") != syntax:
-                view.assign_syntax(syntax)
+            def reload_snippet():
+                SnippetManager.instance.reload_snippet(res_name)
+                syntax = es_syntax('EnhancedSnippet')
+                if view.settings().get("syntax") != syntax:
+                    view.assign_syntax(syntax)
+
+            sublime.set_timeout(reload_snippet, 100)
 
 
     def on_text_command(self, view, command, args):

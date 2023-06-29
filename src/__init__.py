@@ -28,4 +28,5 @@ __all__ = [
 
     # Utility Commands
     "NewEnhancedSnippetCommand",
+    "ConvertToEnhancedSnippetCommand",
 ]
