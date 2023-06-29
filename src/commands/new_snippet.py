@@ -39,7 +39,6 @@ class NewEnhancedSnippetCommand(sublime_plugin.WindowCommand):
                   - text: "a second optional value"
                     details: "the second value in the list"
             ---
-
             Hello, \\${1:this} is \\${2:placeholder}.
             """)
         view.run_command("insert_snippet", {"contents": template})
