@@ -1,9 +1,13 @@
 import sublime
 
 from collections import namedtuple
+from os.path import basename
 import re
 
 from EnhancedSnippets import frontmatter
+import xml.etree.ElementTree as ElementTree
+
+from Default.new_templates import reformat
 
 
 ## ----------------------------------------------------------------------------
@@ -31,6 +35,42 @@ _field_regex = re.compile(r"(?:^|[^\\])\$\{?(\d+)")
 ## ----------------------------------------------------------------------------
 
 
+class SnippetHandler(frontmatter.YAMLHandler):
+    """
+    This class implements a custom extension of the YAML frontmatter handler
+    from the underlying frontmatter library.
+
+    The customization here is to replace the format method, which in the base
+    class uses a template for the generated Post output that includes a blank
+    line between the frontmatter and the post content, which is not what we
+    want or need for our usage in snippets.
+    """
+    def format(self, post, **kwargs):
+        """
+        Turn a post into a string, used in ``frontmatter.dumps``
+        """
+        start_delimiter = kwargs.pop("start_delimiter", self.START_DELIMITER)
+        end_delimiter = kwargs.pop("end_delimiter", self.END_DELIMITER)
+
+        metadata = self.export(post.metadata, **kwargs)
+
+        return reformat(
+            """
+            {start_delimiter}
+            {metadata}
+            {end_delimiter}
+            {content}
+            """).format(
+            metadata=metadata,
+            content=post.content,
+            start_delimiter=start_delimiter,
+            end_delimiter=end_delimiter,
+        ).strip()
+
+
+## ----------------------------------------------------------------------------
+
+
 def log(message, *args, status=False, dialog=False):
     """
     Simple logging method; writes to the console and optionally also the status
@@ -42,6 +82,29 @@ def log(message, *args, status=False, dialog=False):
         sublime.status_message(message)
     if dialog:
         sublime.message_dialog(message)
+
+
+## ----------------------------------------------------------------------------
+
+
+def xml_to_dict(node):
+    """
+    Given an ElementTree node from a loaded XML object, return back a dict
+    representation.
+
+    The returned object will have a field named 'text' that is the textual
+    content of the node, as well as named fields for the attributes of the tag
+    and fields for each of the child tags.
+
+    This implementation is taken from StackOverflow, particularly an elegant
+    solution from Paamand: https://stackoverflow.com/a/68082847/814803
+    """
+    if type(node) is ElementTree.ElementTree: return xml_to_dict(node.getroot())
+    return {
+        **node.attrib,
+        'text': node.text,
+        **{e.tag: xml_to_dict(e) for e in node}
+    }
 
 
 ## ----------------------------------------------------------------------------
@@ -188,6 +251,38 @@ def _yaml_field_options(raw):
 ## ----------------------------------------------------------------------------
 
 
+def _do_xml_load(content):
+    """
+    Given the content of a resource that is expected to be a snippet, parse
+    it as XML and see if it conforms to the appropriate snippet format.
+
+    On success, a dictionary with the keys of the snippet is returned;
+    otherwise the return is None
+    """
+    try:
+        txt = lambda f: parsed.get(f, {}).get('text', '')
+
+        # Try to parse the content into XML, and grab out the fields we want.
+        # We will convert this into a dictionary for easier handling.
+        root = ElementTree.fromstring(content)
+        parsed = xml_to_dict(root)
+
+        return {
+            'tabTrigger': txt('tabTrigger'),
+            'description': txt('description'),
+            'content': txt('content'),
+            'scope': txt('scope'),
+            'glob': '',
+            'options': {}
+        }
+
+    except:
+        pass
+
+
+## ----------------------------------------------------------------------------
+
+
 def _do_yaml_load(content):
     """
     Given the content of a resource that is expected to be a snippet, parse
@@ -198,7 +293,7 @@ def _do_yaml_load(content):
     otherwise the return is None
     """
     try:
-        data = frontmatter.loads(content)
+        data = frontmatter.loads(content, handler=SnippetHandler())
 
         return {
             'tabTrigger': _get_key('tabTrigger', data, '', str),
@@ -247,6 +342,44 @@ def _get_fields(content):
     result.append(0)
 
     return [str(field) for field in result]
+
+
+def load_legacy_snippet(file_or_content, is_file=True):
+    """
+    Given either the name of a file on disk, a resource specification or a
+    string of raw file content, this will attempt to load and parse that data
+    as a standard XML sublime-snippet file.
+
+    is_file determines whether the first argument is treated as inline content
+    or loaded from a file.
+
+    On success a Snippet() instance is returned; this will have the core items
+    of a snippet but not contain a package or a resource specification.
+
+    An exception will be raised if something something something dark side.
+    """
+    if is_file:
+        spp = sublime.packages_path()
+        if file_or_content.startswith(spp):
+            res = f'Packages/{file_or_content[len(spp)+1:]}'
+            data = sublime.load_resource(res)
+        else:
+            with open(file_or_content, "rt", encoding='utf-8') as file:
+                data = file.read()
+
+    else:
+        data = file_or_content
+
+    # Try to get the snippet data out of the file; if this does not work, we
+    # can raise an exception to say that the data was invalid.
+    raw = _do_xml_load(data)
+    if raw is None:
+        prefix = basename(file_or_content) if is_file else 'snippet data'
+        raise ValueError(f'{prefix} is invalid or not in a recognized format')
+
+    return Snippet(raw['tabTrigger'], raw['description'],
+        raw['content'].lstrip(), [], [], [],
+        raw['scope'], '', '', '')
 
 
 def load_snippet(res_or_content, scope='', glob='', is_resource=True):
