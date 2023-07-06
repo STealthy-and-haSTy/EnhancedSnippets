@@ -1,10 +1,20 @@
 import sublime
 
-import os
+from collections import Counter
+from os import makedirs, unlink
+from os.path import basename, join, isfile
 import functools
 from fnmatch import fnmatch
 
 from .utils import log, debug, load_snippet
+
+
+## ----------------------------------------------------------------------------
+
+
+# All sublime-commands files that we create in order to surface enhanced
+# snippets into the command palette start with this prefix.
+_cmd_file_prefix = 'UserSnippets_'
 
 
 ## ----------------------------------------------------------------------------
@@ -43,7 +53,7 @@ class SnippetManager():
     methods that track the internal instance so you don't have to.
     """
     instance = None
-    pending_write = 0
+    pending_writes = Counter()
 
     def __init__(self, listener, enhancements):
         if SnippetManager.instance is not None:
@@ -52,15 +62,12 @@ class SnippetManager():
         SnippetManager.instance = self
         self.enhancements = enhancements
 
-        # Start with our data structures empty.
-        self.discard_all(quiet=True)
-
         # Listen for settings changing, so we know when we need to drop or scan
         # for snippets.
         listener.add_listener(lambda a,r: self._settings_change(a, r))
 
-        # Now that setup is complete, scan for all enhanched snippets across
-        # all packages.
+        # Scan for all enhanced snippets; this will do an implicit discard,
+        # which has the effect of initializing the snippet control structures.
         self.scan()
 
 
@@ -87,20 +94,47 @@ class SnippetManager():
         sublime.set_timeout(perform_package_reload, 1000)
 
 
-    def rewrite_commands_file(self):
+    def discard_old_cmd_files(self):
+        """
+        This will find all of the sublime-commands files that this package may
+        have ever generated out and remove all of them. This gets triggered
+        whenever a full rescan is requested, which can occur both manually as
+        well as automatically at startup.
+        """
+        pkg_name = __name__.split('.')[0]
+        pkg_cache = join(sublime.cache_path(), pkg_name)
+
+        res = [join(pkg_cache, basename(r)) for r in sublime.find_resources('*.sublime-commands')
+                 if r.startswith(f'Cache/{pkg_name}/{_cmd_file_prefix}')]
+
+        for cmd_file in res:
+            log(f"removing old commands file: '{basename(cmd_file)}'")
+            try:
+                unlink(cmd_file)
+            except Exception as error:
+                log(f"error removing file: {str(error)}")
+
+
+    def rewrite_commands_file(self, pkg_set):
         """
         When invoked, this will schedule a generation of a sublime-commands
-        file that will contain calls to our enhanced snippet insertion command
-        for each of the currently known enhanced snippets.
+        file for every package named in the package set; the created file will
+        contain calls to our enhanced snippet insertion command for each of the
+        currently known enhanced snippets that appear in that package.
+
+        If any packages in the list no longer have snippets in them, any file
+        that may have existed will be deleted.
 
         This uses a debounce so that if it is called multiple times in quick
-        sucession the write will only happen once.
+        succession the write will only happen once for any given package in the
+        set.
         """
-        self.pending_write += 1
-        sublime.set_timeout_async(functools.partial(self.__generate_commands_file), 500)
+        for pkg in pkg_set:
+            self.pending_writes[pkg] += 1
+            sublime.set_timeout_async(functools.partial(self.__generate_commands_file, pkg), 500)
 
 
-    def __generate_commands_file(self):
+    def __generate_commands_file(self, rewrite_pkg_name):
         """
         Iterates over all of the currently known and loaded snippets and
         generates out a sublime-commands file that contains an entry for them.
@@ -108,8 +142,8 @@ class SnippetManager():
         This uses a debounce and should not be called directly; use the
         rewrite_commands_file() function instead to schedule the write.
         """
-        self.pending_write -= 1
-        if self.pending_write != 0:
+        self.pending_writes[rewrite_pkg_name] -= 1
+        if self.pending_writes[rewrite_pkg_name] != 0:
             return
 
         def prepare(snippet):
@@ -129,26 +163,31 @@ class SnippetManager():
                 }
             }
 
-        # Create the JSON structure of the sublime-commands file from the list
-        # of snippets that are currently loaded; If that is empty, then we can
-        # just leave.
-        data = [prepare(snippet) for snippet in self._res_list.values()]
-        if not data:
-            return
-
         # Get our package name, then use it to construct a filename at which
         # to store our commands file.
         pkg_name = __name__.split('.')[0]
-        file_folder = os.path.join(sublime.cache_path(), pkg_name)
-        filename = os.path.join(file_folder, 'UserSnippets.sublime-commands')
+        file_folder = join(sublime.cache_path(), pkg_name)
+        filename = join(file_folder, f'{_cmd_file_prefix}{rewrite_pkg_name}.sublime-commands')
 
         # Ensure that the folder we're about to put a file in exists;
         # potentially on an initial install the plugin will load prior to the
         # cache folder being set up to store the syntax cache, in which case
         # the below would fail.
-        os.makedirs(file_folder, mode=0o777, exist_ok=True)
+        makedirs(file_folder, mode=0o777, exist_ok=True)
 
-        debug(f'Writing {len(data)} entries to {filename}')
+        # Create the JSON structure of the sublime-commands file from the list
+        # of snippets that are currently loaded; If that is empty, then we can
+        # just leave.
+        data = [prepare(snippet) for snippet in self._res_list.values() if snippet.package == rewrite_pkg_name]
+        if not data:
+            try:
+                log(f'removing sublime-commands file for package {rewrite_pkg_name}; it is now empty')
+                unlink(filename)
+            except FileNotFoundError:
+                pass
+            return
+
+        debug(f"Writing {len(data)} entries to '{basename(filename)}'")
         with open(filename, 'wt') as file:
             file.write(sublime.encode_value(data, True))
 
@@ -179,9 +218,10 @@ class SnippetManager():
         Given a list of 0 or more snippet items, remove all snippets in the
         passed in list from all of our internal lists.
         """
-        discarded = 0
+        discarded = set()
+
         for snippet in [s for s in items if s.resource in self._res_list]:
-            discarded += 1
+            discarded.add(snippet.package)
             debug(f'discarding: {snippet.resource}')
 
             res = snippet.resource
@@ -206,7 +246,7 @@ class SnippetManager():
         # If we discarded any snippets, recreate the commands file so that
         # they will no longer be presented.
         if discarded:
-            self.rewrite_commands_file()
+            self.rewrite_commands_file(discarded)
 
 
     def discard_snippet(self, res_name):
@@ -254,12 +294,14 @@ class SnippetManager():
         an existing one.
         """
         self.discard_snippet(res_name)
-        self._load_snippet(res_name)
+        snippet = self._load_snippet(res_name)
 
-        # Since we reloaded a snippet, regenerate the commands file so that
-        # any details changes that might be externally visible will take
-        # effect.
-        self.rewrite_commands_file()
+        # The discard above will schedule a rewrite for the commands file if
+        # that snippet existed. If it didn't, then the load might have loaded
+        # it, in which case schedule now; this debounces so if it is a pure
+        # reload, the file does not get generated twice.
+        if snippet:
+            self.rewrite_commands_file({snippet.package})
 
 
     def snippet_for_resource(self, res_name):
@@ -279,13 +321,16 @@ class SnippetManager():
         """
         # Scan over all snippets, load them, and for any that return a Snippet
         # instance, add them to the appropriate lists.
+        found = set()
         res = sublime.find_resources('*.enhanced-sublime-snippet')
         for entry in [r for r in res if r.startswith(prefix)]:
-            self._load_snippet(entry)
+            snippet = self._load_snippet(entry)
+            if snippet:
+                found.add(snippet.package)
 
         # After a full scan, regenerate the commands file to ensure that all
         # snippets that were found as a part of the scan are updated.
-        self.rewrite_commands_file()
+        self.rewrite_commands_file(found)
 
 
     def reload_enhancements(self):
@@ -299,10 +344,11 @@ class SnippetManager():
     def scan(self):
         """
         Discard all of our lists of snippets and do a complete and total rescan
-        of the entire package ecosytem.
+        of the entire package ecosystem.
         """
         log('scanning for enhanced snippets across all packages')
         self.discard_all(quiet=True)
+        self.discard_old_cmd_files()
         self.__scan_snippets()
 
 
