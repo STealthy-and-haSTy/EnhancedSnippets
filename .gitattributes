@@ -1,4 +1,11 @@
-RELEASE.md export-ignore
+# The only portion of the docs that needs to remain in the package is  the
+# markdown content that makes up the pages; the icons and any images do not need
+# to be placed in the package, and neither does the page that holds the content.
+docs/_images/ export-ignore
+docs/favicon.ico export-ignore
+docs/index.html export-ignore
+
+# Git and GitHub control files do not need to be in the repo
 .gitattributes export-ignore
 .gitignore export-ignore
 .github/ export-ignore
