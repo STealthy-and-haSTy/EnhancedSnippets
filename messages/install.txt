@@ -7,10 +7,15 @@ Snippet system in Sublime Text to include:
 - Field values can be chosen from a custom, multiple choice list
 
 
-NOTE: This package is still under development and is not feature
-      complete, but is still functional. If you find any problems or
-      have any additional feature suggestions, please report them at:
+NOTE: This package is still under development and does not yet contain
+      all of the features that I would like to add, but is still
+      functional. If you find any problems or have any additional
+      feature suggestions, please report them at:
         https://github.com/STealthy-and-haSTy/EnhancedSnippets/issues
+
+
+More documentation can be found online at:
+  https://enhancedsnippets.odatnurd.net/
 
 
 Quick Start

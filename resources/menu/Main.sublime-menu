@@ -31,10 +31,10 @@
         "children": [
           { "caption": "EnhancedSnippets",
             "children": [
-              { "caption": "README",
-                "command": "open_file",
+              { "caption": "Documentation",
+                "command": "open_url",
                 "args": {
-                  "file": "${packages}/EnhancedSnippets/README.md"
+                  "url": "https://enhancedsnippets.odatnurd.net/"
                 }
               },
               { "caption": "-" },

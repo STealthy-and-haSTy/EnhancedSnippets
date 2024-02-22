@@ -13,10 +13,10 @@
       "default": "[\n\t$0\n]\n"
     }
   },
-  { "caption": "EnhancedSnippets: Open Readme",
-    "command": "open_file",
+  { "caption": "EnhancedSnippets: View Documentation",
+    "command": "open_url",
     "args": {
-      "file": "${packages}/EnhancedSnippets/README.md"
+      "url": "https://enhancedsnippets.odatnurd.net/"
     }
   },
 

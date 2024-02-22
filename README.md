@@ -23,10 +23,7 @@ options:
   - field: 2
     placeholder: 'Windstorm Version Number'
     values:
-      - '0.1.17'
-      - '0.1.16'
-      - '0.1.15'
-      - '0.1.14'
+      - '0.3.8'
       - 'latest'
 ---
 <!DOCTYPE html>
@@ -37,7 +34,7 @@ options:
   <title>$1</title>
 </head>
 <body>
-  <!-- Docs: https://axel669.github.io/lib.windstorm/ -->
+  <!-- Docs: https://windstorm.axel669.net/ -->
   <script src="https://cdn.jsdelivr.net/npm/@axel669/windstorm@${2:latest}/dist/browser.js"></script>
 
   $0
@@ -54,30 +51,9 @@ The best way to install the package is via PackageControl, as this will take
 care of ensuring that the package is kept up to date without your having to do
 anything at all.
 
-Currently, the package is in an alpha pre-release state; this does not mean
-that it's not safe, only that it is still being developed, so new features may
-be added or bugs may be present.
-
-In order to install via package control during this pre-release phase, you will
-need to take the following steps:
-
- - Choose `Preferences > Package Settings > Package Control > Settings` from the
-   main menu
-
- - In your `Package Control.sublime-settings` files, add `EnhancedSnippets` to
-   the list of packages in `install_prereleases` (or, if your settings do not
-   have that key, add it):
-
- ```json
-  "install_prereleases":
-  [
-    "EnhancedSnippets",
-  ],
- ```
-
-Once this is done, you can install via Package Control by opening the Command
-Palette and selecting the command `Package Control: Install Package` and
-searching for `EnhancedSnippets` in the list of packages.
+You can install via Package Control by opening the Command Palette and
+selecting the command `Package Control: Install Package` and searching for
+`EnhancedSnippets` in the list of packages.
 
 
 
