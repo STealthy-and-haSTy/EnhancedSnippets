@@ -12,7 +12,7 @@ Snippet System in Sublime Text to include:
 - Snippet fields can be given a list of options, for which you will be prompted
   to select a value when the snippet expands.
 
-![Demo Video](/_images/EnhancedSnippetsDemo.gif)
+![Demo Video](https://raw.githubusercontent.com/STealthy-and-haSTy/EnhancedSnippets/a078c374d34ecaf1360250b38ea077228aede497/docs/_images/EnhancedSnippetsDemo.gif)
 
 ```yaml
 ---
